@@ -2,19 +2,35 @@
 
 #include "output.h"
 
+void ColorSet_step(ColorSet* cs);
+
+typedef struct {
+    Vector translate;
+    float scale;
+} Transform;
+
+void ps_set_color(FILE* f, Color c);
+void ps_draw_line(FILE* f, Point a, Point b, const Transform* t);
+void ps_draw_point(FILE* f, Point p, const Transform* t);
+Transform compute_ps_transform(const AABB* aabb);
+
+void svg_begin_color(FILE* f, Color c);
+void svg_end_color(FILE* f);
+void svg_draw_line(FILE* f, Point a, Point b, const Transform* t);
+void svg_draw_point(FILE* f, Point p, const Transform* t);
+Transform compute_svg_transform(const AABB* aabb);
+
 ColorSet ColorSet_new(size_t size) {
     // number of combinations is 'pow((255/step), 3)'
     // we want it to be 'size + 2' (no black and white), hence the formula:
     uint8_t step = (uint8_t)(255. / powf((float)(size + 2), 1./3.));
     return (ColorSet) {
-        next: (Color) { 0, 0, step }, // start b at step because no white
-        step: step
+        .next = { 0, 0, step }, // start b at step because no white
+        .step = step
     };
 }
 
-Color ColorSet_pop(ColorSet* cs) {
-    Color c = cs->next;
-
+void ColorSet_step(ColorSet* cs) {
     uint8_t step = cs->step;
     cs->next.b += step;
     if (cs->next.b < step) {
@@ -23,19 +39,19 @@ Color ColorSet_pop(ColorSet* cs) {
             cs->next.r += step;
         }
     }
+}
 
+Color ColorSet_pop(ColorSet* cs) {
+    Color c = cs->next;
+    ColorSet_step(cs);
     return c;
 }
 
 void ps_set_color(FILE* f, Color c) {
-    float to_ps(uint8_t x) { return (float)(x)/255.; }
+    #define to_ps(x) (float)(x)/255.
     fprintf(f, "%f %f %f setrgbcolor\n", to_ps(c.r), to_ps(c.g), to_ps(c.b));
+    #undef to_ps
 }
-
-typedef struct {
-    Vector translate;
-    float scale;
-} Transform;
 
 #define x_trans(X) t->scale*(float)(X+t->translate.x)
 #define y_trans(Y) t->scale*(float)(Y+t->translate.y)
@@ -56,8 +72,8 @@ void ps_draw_point(FILE* f, Point p, const Transform* t) {
 
 Transform compute_ps_transform(const AABB* aabb) {
     return (Transform) {
-        translate: (Vector) { -aabb->inf.x, -aabb->inf.y },
-        scale: 600. / (float)(aabb->sup.x - aabb->inf.x)
+        .translate = { -aabb->inf.x, -aabb->inf.y },
+        .scale = 600. / (float)(aabb->sup.x - aabb->inf.x)
     };
 }
 
@@ -155,8 +171,8 @@ Transform compute_svg_transform(const AABB* aabb) {
     float scale_w = 600. / (float)(aabb->sup.x - aabb->inf.x);
     float scale_h = 600. / (float)(aabb->sup.y - aabb->inf.y);
     return (Transform) {
-        translate: (Vector) { -aabb->inf.x, -aabb->inf.y },
-        scale: max(scale_w, scale_h)
+        .translate = { -aabb->inf.x, -aabb->inf.y },
+        .scale = float_max(scale_w, scale_h)
     };
 }
 

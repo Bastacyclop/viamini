@@ -33,20 +33,6 @@ void mem_swap_with(void* a, void* b, void* t, size_t n);
 /// Fires an error if `ptr` is `NULL`.
 void assert_alloc(void* ptr);
 
-/// Returns the maximum of two values.
-#define max(a, b) ({         \
-    __auto_type _a = (a);    \
-    __auto_type _b = (b);    \
-    (_a > _b) ? (_a) : (_b); \
-})
-
-/// Returns the minimum of two values.
-#define min(a, b) ({         \
-    __auto_type _a = (a);    \
-    __auto_type _b = (b);    \
-    (_a < _b) ? (_a) : (_b); \
-})
-
 /// Is `n` a power of two ?
 bool is_power_of_two(size_t n);
 
@@ -56,5 +42,21 @@ size_t next_power_of_two(size_t n);
 /// Returns the power of two following `n`.
 /// Fires an error if there is an overflow.
 size_t checked_next_power_of_two(size_t n);
+
+#define def_max_min_for(T)      \
+    T T##_max(T a, T b);        \
+    T T##_min(T a, T b);
+
+def_max_min_for(size_t)
+def_max_min_for(uint8_t)
+def_max_min_for(uint16_t)
+def_max_min_for(uint32_t)
+def_max_min_for(uint64_t)
+def_max_min_for(int8_t)
+def_max_min_for(int16_t)
+def_max_min_for(int32_t)
+def_max_min_for(int64_t)
+def_max_min_for(float)
+def_max_min_for(double)
 
 #endif // UTIL_H

@@ -1,9 +1,12 @@
 #include "vec.h"
 
+void drop_elems(Vec* v, void (*drop_elem)(void*));
+void assert_bound(const Vec* v, size_t i);
+
 Vec Vec_new(size_t elem_size) {
     return (Vec) {
-        data: NULL, elem_size: elem_size,
-        len: 0, cap: 0
+        .data = NULL, .elem_size = elem_size,
+        .len = 0, .cap = 0
     };
 }
 
@@ -16,8 +19,8 @@ Vec Vec_with_capacity(size_t capacity, size_t elem_size) {
     assert_alloc(data);
 
     return (Vec) {
-        data: data, elem_size: elem_size,
-        len: 0, cap: capacity
+        .data = data, .elem_size = elem_size,
+        .len = 0, .cap = capacity
     };
 }
 
@@ -34,11 +37,13 @@ bool Vec_is_empty(const Vec* v) {
 }
 
 void* Vec_unsafe_get_mut(Vec* v, size_t i) {
-    return v->data + i*v->elem_size;
+    uint8_t* data = v->data;
+    return &data[i*v->elem_size];
 }
 
 const void* Vec_unsafe_get(const Vec* v, size_t i) {
-    return v->data + i*v->elem_size;
+    uint8_t* data = v->data;
+    return &data[i*v->elem_size];
 }
 
 void assert_bound(const Vec* v, size_t i) {

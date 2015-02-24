@@ -1,6 +1,10 @@
 #include "circuit.h"
 #include "output.h"
 
+Vec find_netlists(void);
+char* change_extension(const char* path, const char* ext);
+void vec_str_drop(char** s);
+
 #define TERM_GREEN(str) "\x1B[32m"str"\033[0m"
 
 Vec find_netlists() {

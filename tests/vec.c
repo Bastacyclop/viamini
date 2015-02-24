@@ -1,5 +1,7 @@
 #include "../src/vec.h"
 
+void simple(void);
+
 void simple() {
     Vec v = Vec_new(sizeof(uint32_t));
     for (uint32_t i = 0; i < 10; i++) {

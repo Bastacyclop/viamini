@@ -67,8 +67,29 @@ size_t next_power_of_two(size_t n) {
 size_t checked_next_power_of_two(size_t n) {
     size_t mb = next_power_of_two(n);
     if (mb < n) {
-        perror("overflow while compting next power of two");
+        perror("overflow while computing next power of two");
         exit(1);
     }
     return mb;
 }
+
+#define impl_max_min_for(T)         \
+    T T##_max(T a, T b) {           \
+        return (a > b) ? (a) : (b); \
+    }                               \
+                                    \
+    T T##_min(T a, T b) {           \
+        return (a < b) ? (a) : (b); \
+    }
+
+impl_max_min_for(size_t)
+impl_max_min_for(uint8_t)
+impl_max_min_for(uint16_t)
+impl_max_min_for(uint32_t)
+impl_max_min_for(uint64_t)
+impl_max_min_for(int8_t)
+impl_max_min_for(int16_t)
+impl_max_min_for(int32_t)
+impl_max_min_for(int64_t)
+impl_max_min_for(float)
+impl_max_min_for(double)

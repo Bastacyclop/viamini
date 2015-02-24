@@ -1,9 +1,17 @@
 #include "binary_heap.h"
 
+size_t root_index(void);
+size_t left_child_index(size_t parent);
+size_t right_child_index(size_t parent);
+size_t parent_index(size_t child);
+void heap_swap(BinaryHeap* bh, void* a, void* b);
+void may_bubble_up(BinaryHeap* bh, size_t i);
+void may_bubble_down(BinaryHeap* bh, size_t i);
+
 BinaryHeap BinaryHeap_new(size_t elem_size, bool (*predicate)(const void*, const void*)) {
     return (BinaryHeap) {
-        vec: Vec_new(elem_size),
-        predicate: predicate
+        .vec = Vec_new(elem_size),
+        .predicate = predicate
     };
 }
 

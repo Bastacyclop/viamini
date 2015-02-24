@@ -1,6 +1,42 @@
 #include "binary_heap.h"
 #include "circuit.h"
 
+void point_from_line(Vec* points, const char* line);
+void segment_from_line(Vec* segments, const char* line);
+void check_net_segments(Net* net);
+Net net_from_file(FILE* f);
+AABB compute_aabb(Vec* nets);
+void drop_net(Net* net);
+
+typedef struct {
+    const Point* beg;
+    const Point* end;
+} SegmentRef;
+
+bool hv_intersects(SegmentRef h, SegmentRef v);
+bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect);
+
+typedef enum {
+    H_SEGMENT_BEGIN,
+    H_SEGMENT_END,
+    V_SEGMENT
+} BreakpointType;
+
+typedef struct {
+    size_t net;
+    size_t seg;
+    SegmentRef ref;
+} BreakpointData;
+
+typedef struct {
+    BreakpointType type;
+    BreakpointData data;
+} Breakpoint;
+
+void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment);
+int32_t Breakpoint_get_x(const Breakpoint* b);
+bool break_order(const Breakpoint* a, const Breakpoint* b);
+
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
     exit(1);                                        \
@@ -47,8 +83,8 @@ Net net_from_file(FILE* f) {
     }
 
     Net n = {
-        points: Vec_with_capacity(point_count, sizeof(Point)),
-        segments: Vec_with_capacity(segment_count, sizeof(Segment))
+        .points = Vec_with_capacity(point_count, sizeof(Point)),
+        .segments = Vec_with_capacity(segment_count, sizeof(Segment))
     };
 
     for (size_t i = 0; i < point_count; i++) {
@@ -72,7 +108,7 @@ Net net_from_file(FILE* f) {
 
 AABB compute_aabb(Vec* nets) {
     Point first = *(const Point*)Vec_get(&((const Net*)Vec_get(nets, 0))->points, 0);
-    AABB aabb = (AABB) { inf: first, sup: first };
+    AABB aabb = (AABB) { .inf = first, .sup = first };
 
     size_t net_count = Vec_len(nets);
     for (size_t n = 0; n < net_count; n++) {
@@ -125,17 +161,17 @@ Circuit Circuit_from_file(const char* path) {
     fclose(f);
 
     return (Circuit) {
-        nets: nets,
-        aabb: compute_aabb(&nets)
+        .nets = nets,
+        .aabb = compute_aabb(&nets)
     };
 }
 
-void Circuit_drop(Circuit* c) {
-    void drop_net(Net* net) {
-        Vec_plain_drop(&net->points);
-        Vec_plain_drop(&net->segments);
-    }
+void drop_net(Net* net) {
+    Vec_plain_drop(&net->points);
+    Vec_plain_drop(&net->segments);
+}
 
+void Circuit_drop(Circuit* c) {
     Vec_drop(&c->nets, (void (*)(void*))drop_net);
 }
 
@@ -160,11 +196,6 @@ void Circuit_print(const Circuit* c) {
         }
     }
 }
-
-typedef struct {
-    const Point* beg;
-    const Point* end;
-} SegmentRef;
 
 bool hv_intersects(SegmentRef h, SegmentRef v) {
     assert(h.beg->x <= h.end->x);
@@ -214,8 +245,8 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
         for (size_t s = 0; s < a_segment_count; s++) {
             const Segment* a = Vec_get(&a_net->segments, s);
             SegmentRef a_ref = {
-                beg: Vec_get(&a_net->points, a->beg),
-                end: Vec_get(&a_net->points, a->end)
+                .beg = Vec_get(&a_net->points, a->beg),
+                .end = Vec_get(&a_net->points, a->end)
             };
 
             // We don't want to check intranet intersections.
@@ -228,16 +259,16 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
                 for (size_t t = 0; t < b_segment_count; t++) {
                     const Segment* b = Vec_get(&b_net->segments, t);
                     SegmentRef b_ref = {
-                        beg: Vec_get(&b_net->points, b->beg),
-                        end: Vec_get(&b_net->points, b->end)
+                        .beg = Vec_get(&b_net->points, b->beg),
+                        .end = Vec_get(&b_net->points, b->end)
                     };
 
                     Point sect;
                     if (segment_intersects(a_ref, b_ref, &sect)) {
                         Intersection intersection = {
-                            a_net: i, a_seg: s,
-                            b_net: j, b_seg: t,
-                            sect: sect
+                            .a_net = i, .a_seg = s,
+                            .b_net = j, .b_seg = t,
+                            .sect = sect
                         };
                         Vec_push(&intersections, &intersection);
                     }
@@ -249,30 +280,19 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
     return intersections;
 }
 
-typedef enum {
-    H_SEGMENT_BEGIN,
-    H_SEGMENT_END,
-    V_SEGMENT
-} BreakpointType;
-
-typedef struct {
-    BreakpointType type;
-    SegmentRef seg;
-} Breakpoint;
-
-void register_break(BinaryHeap* bh, const Net* net, const Segment* segment) {
+void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment) {
     const Point* beg = Vec_get(&net->points, segment->beg);
     const Point* end = Vec_get(&net->points, segment->end);
     if (beg->x == end->x) { // |
         Breakpoint breakpoint = {
-            type: V_SEGMENT,
-            seg: (SegmentRef) { beg: beg, end: end }
+            .type = V_SEGMENT,
+            .data = { .net = n, .seg = s, { .beg = beg, .end = end } }
         };
         BinaryHeap_insert(bh, &breakpoint);
     } else { // -
         Breakpoint breakpoint = {
-            type: H_SEGMENT_BEGIN,
-            seg: (SegmentRef) { beg: beg, end: end }
+            .type = H_SEGMENT_BEGIN,
+            .data = { .net = n, .seg = s, { .beg = beg, .end = end } }
         };
         BinaryHeap_insert(bh, &breakpoint);
         breakpoint.type = H_SEGMENT_END;
@@ -283,19 +303,19 @@ void register_break(BinaryHeap* bh, const Net* net, const Segment* segment) {
 int32_t Breakpoint_get_x(const Breakpoint* b) {
     BreakpointType t = b->type;
     if (t == H_SEGMENT_BEGIN) {
-        return b->seg.beg->x;
+        return b->data.ref.beg->x;
     } else {
-        return b->seg.end->x;
+        return b->data.ref.end->x;
     }
 }
 
-IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
-    bool sort(const Breakpoint* a, const Breakpoint* b) {
-        return Breakpoint_get_x(a) < Breakpoint_get_x(b);
-    }
+bool break_order(const Breakpoint* a, const Breakpoint* b) {
+    return Breakpoint_get_x(a) < Breakpoint_get_x(b);
+}
 
+IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
     BinaryHeap breakpoints = BinaryHeap_new(sizeof(Breakpoint),
-                                            (bool (*)(const void*, const void*))sort);
+                                            (bool (*)(const void*, const void*))break_order);
 
     size_t net_count = Vec_len(&c->nets);
     for (size_t n = 0; n < net_count; n++) {
@@ -305,35 +325,37 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
         for (size_t s = 0; s < segment_count; s++) {
             const Segment* segment = Vec_get(&net->segments, s);
 
-            register_break(&breakpoints, net, segment);
+            register_break(&breakpoints, n, net, s, segment);
         }
     }
 
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
-    Vec segments = Vec_new(sizeof(SegmentRef));
+    Vec segments = Vec_new(sizeof(BreakpointData));
 
     Breakpoint breakpoint;
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
         if (breakpoint.type == H_SEGMENT_BEGIN) {
-            Vec_push(&segments, &breakpoint.seg);
+            Vec_push(&segments, &breakpoint.data);
         } else if (breakpoint.type == H_SEGMENT_END) {
             for (size_t i = 0; i < Vec_len(&segments); i++) {
-                if (memcmp(&breakpoint.seg, Vec_get(&segments, i), sizeof(SegmentRef)) == 0) {
+                if (memcmp(&breakpoint.data, Vec_get(&segments, i), sizeof(BreakpointData)) == 0) {
                     Vec_swap_remove(&segments, NULL, i);
                     break;
                 }
             }
         } else if (breakpoint.type == V_SEGMENT) {
+            BreakpointData a = breakpoint.data;
+
             size_t seg_count = Vec_len(&segments);
             for (size_t i = 0; i < seg_count; i++) {
-                const SegmentRef* seg = Vec_get(&segments, i);
+                BreakpointData b = *(const BreakpointData*)Vec_get(&segments, i);
 
                 Point sect;
-                if (segment_intersects(breakpoint.seg, *seg, &sect)) {
+                if (segment_intersects(a.ref, b.ref, &sect)) {
                     Intersection intersection = {
-                        a_net: 0, a_seg: 0, // TODO
-                        b_net: 0, b_seg: 0, // TODO
-                        sect: sect
+                        .a_net = a.net, .a_seg = a.seg,
+                        .b_net = b.net, .b_seg = b.seg,
+                        .sect = sect
                     };
                     Vec_push(&intersections, &intersection);
                 }
@@ -341,6 +363,7 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
         }
     }
 
+    Vec_plain_drop(&segments);
     BinaryHeap_plain_drop(&breakpoints);
 
     return intersections;

@@ -1,5 +1,7 @@
 #include "../src/binary_heap.h"
 
+bool is_inf(const int32_t* a, const int32_t* b);
+
 bool is_inf(const int32_t* a, const int32_t* b) {
     return *a < *b;
 }
