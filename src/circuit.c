@@ -350,6 +350,10 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
             for (size_t i = 0; i < seg_count; i++) {
                 BreakpointData b = *(const BreakpointData*)Vec_get(&segments, i);
 
+                if (a.net == b.net) {
+                    continue;
+                }
+
                 Point sect;
                 if (segment_intersects(a.ref, b.ref, &sect)) {
                     Intersection intersection = {

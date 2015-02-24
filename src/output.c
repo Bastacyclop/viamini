@@ -160,7 +160,7 @@ void svg_draw_line(FILE* f, Point a, Point b, const Transform* t) {
 }
 
 void svg_draw_point(FILE* f, Point p, const Transform* t) {
-    fprintf(f, "<circle cx=\"%f\" cy=\"%f\" r=\"1.5\" />\n",
+    fprintf(f, "<circle cx=\"%f\" cy=\"%f\" r=\"1.\" />\n",
             x_trans(p.x), y_trans(p.y));
 }
 
@@ -183,7 +183,7 @@ void Circuit_to_svg(const Circuit* c, const char* path) {
         exit(1);
     }
 
-    fputs("<svg version=\"1.1\" baseProfile=\"full\" xmlns=\"http://www.w3.org/2000/svg\">\n", f);
+    fputs("<svg version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\">\n", f);
 
     size_t net_count = Vec_len(&c->nets);
     ColorSet colors = ColorSet_new(net_count);
