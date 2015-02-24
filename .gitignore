@@ -1,0 +1,3 @@
+build/*
+netlists/*.ps
+netlists/*.svg
