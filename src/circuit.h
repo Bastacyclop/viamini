@@ -31,8 +31,13 @@ typedef struct {
     AABB aabb;
 } Circuit;
 
+/// Loads a circuit from a file.
 Circuit Circuit_from_file(const char* path);
+
+/// Releases the circuit resources.
 void Circuit_drop(Circuit* c);
+
+/// Prints the file representation of the circuit on the terminal.
 void Circuit_print(const Circuit* c);
 
 typedef Vec IntersectionVec;
@@ -44,7 +49,10 @@ typedef struct {
     Point sect;
 } Intersection;
 
+/// Finds the circuit intersections by comparing the segments of different nets two by two.
 IntersectionVec Circuit_intersections_naive(const Circuit* c);
+
+/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 IntersectionVec Circuit_intersections_sweep(const Circuit* c);
 
 #endif // CIRCUIT_H

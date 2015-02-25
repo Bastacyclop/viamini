@@ -65,6 +65,7 @@ void may_bubble_up(BinaryHeap* bh, size_t i) {
     size_t p = parent_index(i);
     void* parent = Vec_unsafe_get_mut(&bh->vec, p);
     void* elem = Vec_unsafe_get_mut(&bh->vec, i);
+
     if ((*bh->predicate)(elem, parent)) {
         heap_swap(bh, elem, parent);
         may_bubble_up(bh, p);
@@ -112,6 +113,7 @@ bool BinaryHeap_pop(BinaryHeap* bh, void* e) {
     if (len < 2) {
         return Vec_pop(&bh->vec, e);
     }
+
     void* root = Vec_unsafe_get_mut(&bh->vec, root_index());
     if (e) {
         memcpy(e, root, bh->vec.elem_size);

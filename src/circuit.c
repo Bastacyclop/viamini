@@ -5,6 +5,7 @@ void point_from_line(Vec* points, const char* line);
 void segment_from_line(Vec* segments, const char* line);
 void check_net_segments(Net* net);
 Net net_from_file(FILE* f);
+void AABB_include(AABB* aabb, Point p);
 AABB compute_aabb(Vec* nets);
 void drop_net(Net* net);
 
@@ -36,6 +37,9 @@ typedef struct {
 void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment);
 int32_t Breakpoint_get_x(const Breakpoint* b);
 bool break_order(const Breakpoint* a, const Breakpoint* b);
+BinaryHeap build_breakpoints(const Circuit* c);
+void sweep_remove_segment(Vec* segments, const BreakpointData* d);
+void sweep_check_intersections(IntersectionVec* intersections, const Vec* segments, BreakpointData d);
 
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
@@ -106,6 +110,19 @@ Net net_from_file(FILE* f) {
     return n;
 }
 
+void AABB_include(AABB* aabb, Point p) {
+    if (p.x < aabb->inf.x) {
+        aabb->inf.x = p.x;
+    } else if (p.x > aabb->sup.x) {
+        aabb->sup.x = p.x;
+    }
+    if (p.y < aabb->inf.y) {
+        aabb->inf.y = p.y;
+    } else if (p.y > aabb->sup.y) {
+        aabb->sup.y = p.y;
+    }
+}
+
 AABB compute_aabb(Vec* nets) {
     Point first = *(const Point*)Vec_get(&((const Net*)Vec_get(nets, 0))->points, 0);
     AABB aabb = (AABB) { .inf = first, .sup = first };
@@ -118,16 +135,7 @@ AABB compute_aabb(Vec* nets) {
         for (size_t p = 0; p < point_count; p++) {
             const Point* point = Vec_get(&net->points, p);
 
-            if (point->x < aabb.inf.x) {
-                aabb.inf.x = point->x;
-            } else if (point->x > aabb.sup.x) {
-                aabb.sup.x = point->x;
-            }
-            if (point->y < aabb.inf.y) {
-                aabb.inf.y = point->y;
-            } else if (point->y > aabb.sup.y) {
-                aabb.sup.y = point->y;
-            }
+            AABB_include(&aabb, *point);
         }
     }
 
@@ -283,17 +291,13 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
 void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment) {
     const Point* beg = Vec_get(&net->points, segment->beg);
     const Point* end = Vec_get(&net->points, segment->end);
+    BreakpointData data = { .net = n, .seg = s, { .beg = beg, .end = end } };
+
     if (beg->x == end->x) { // |
-        Breakpoint breakpoint = {
-            .type = V_SEGMENT,
-            .data = { .net = n, .seg = s, { .beg = beg, .end = end } }
-        };
+        Breakpoint breakpoint = { .type = V_SEGMENT, .data = data };
         BinaryHeap_insert(bh, &breakpoint);
     } else { // -
-        Breakpoint breakpoint = {
-            .type = H_SEGMENT_BEGIN,
-            .data = { .net = n, .seg = s, { .beg = beg, .end = end } }
-        };
+        Breakpoint breakpoint = { .type = H_SEGMENT_BEGIN, .data = data };
         BinaryHeap_insert(bh, &breakpoint);
         breakpoint.type = H_SEGMENT_END;
         BinaryHeap_insert(bh, &breakpoint);
@@ -313,7 +317,7 @@ bool break_order(const Breakpoint* a, const Breakpoint* b) {
     return Breakpoint_get_x(a) < Breakpoint_get_x(b);
 }
 
-IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
+BinaryHeap build_breakpoints(const Circuit* c) {
     BinaryHeap breakpoints = BinaryHeap_new(sizeof(Breakpoint),
                                             (bool (*)(const void*, const void*))break_order);
 
@@ -329,41 +333,58 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
         }
     }
 
+    return breakpoints;
+}
+
+void sweep_remove_segment(Vec* segments, const BreakpointData* d) {
+    size_t seg_count = Vec_len(segments);
+
+    for (size_t i = 0; i < seg_count; i++) {
+        const BreakpointData* d_i = Vec_get(segments, i);
+
+        if (memcmp(d, d_i, 2*sizeof(size_t)) == 0) {
+            Vec_swap_remove(segments, NULL, i);
+            return;
+        }
+    }
+}
+
+void sweep_check_intersections(IntersectionVec* intersections, const Vec* segments, BreakpointData d) {
+    size_t seg_count = Vec_len(segments);
+
+    for (size_t i = 0; i < seg_count; i++) {
+        BreakpointData d_i = *(const BreakpointData*)Vec_get(segments, i);
+
+        if (d.net == d_i.net) {
+            continue;
+        }
+
+        Point sect;
+        if (segment_intersects(d.ref, d_i.ref, &sect)) {
+            Intersection intersection = {
+                .a_net = d.net, .a_seg = d.seg,
+                .b_net = d_i.net, .b_seg = d_i.seg,
+                .sect = sect
+            };
+            Vec_push(intersections, &intersection);
+        }
+    }
+}
+
+IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
+    BinaryHeap breakpoints = build_breakpoints(c);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     Vec segments = Vec_new(sizeof(BreakpointData));
 
     Breakpoint breakpoint;
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
-        if (breakpoint.type == H_SEGMENT_BEGIN) {
-            Vec_push(&segments, &breakpoint.data);
-        } else if (breakpoint.type == H_SEGMENT_END) {
-            for (size_t i = 0; i < Vec_len(&segments); i++) {
-                if (memcmp(&breakpoint.data, Vec_get(&segments, i), sizeof(BreakpointData)) == 0) {
-                    Vec_swap_remove(&segments, NULL, i);
-                    break;
-                }
-            }
-        } else if (breakpoint.type == V_SEGMENT) {
-            BreakpointData a = breakpoint.data;
-
-            size_t seg_count = Vec_len(&segments);
-            for (size_t i = 0; i < seg_count; i++) {
-                BreakpointData b = *(const BreakpointData*)Vec_get(&segments, i);
-
-                if (a.net == b.net) {
-                    continue;
-                }
-
-                Point sect;
-                if (segment_intersects(a.ref, b.ref, &sect)) {
-                    Intersection intersection = {
-                        .a_net = a.net, .a_seg = a.seg,
-                        .b_net = b.net, .b_seg = b.seg,
-                        .sect = sect
-                    };
-                    Vec_push(&intersections, &intersection);
-                }
-            }
+        switch (breakpoint.type) {
+            case H_SEGMENT_BEGIN: Vec_push(&segments, &breakpoint.data);
+                break;
+            case H_SEGMENT_END: sweep_remove_segment(&segments, &breakpoint.data);
+                break;
+            case V_SEGMENT: sweep_check_intersections(&intersections, &segments, breakpoint.data);
+                break;
         }
     }
 

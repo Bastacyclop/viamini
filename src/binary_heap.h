@@ -9,7 +9,7 @@ typedef struct {
     bool (*predicate)(const void*, const void*);
 } BinaryHeap;
 
-// TODO: with_capacity, reserve, reserve_exact, shrink_to_fit
+// TODO: with_capacity, reserve, reserve_exact, shrink_to_fit, ...
 
 /// Creates an empty heap that will contain elements of size `elem_size`
 /// and be sorted with `predicate`.
