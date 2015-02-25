@@ -45,20 +45,21 @@ int main() {
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
+    fputs("0 0 0\n", bench_data); // placeholder
 
     for (size_t i = 0; i < files_count; i++) {
         const char* file = *(const char* const*)Vec_get(&files, i);
-        printf(" - handling `%s` :\n", file);
+        printf(" - handling `%s`:\n", file);
 
         Circuit circuit = Circuit_from_file(file);
 
-        measure_exec_time("  - intersections naive",
+        measure_exec_time("   intersections naive",
             Vec intersections = Circuit_intersections_naive(&circuit);
         )
         uint32_t naive_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections);
 
-        measure_exec_time("  - intersections sweep",
+        measure_exec_time("   intersections sweep",
             Vec intersections2 = Circuit_intersections_sweep(&circuit);
         )
         uint32_t sweep_time = (uint32_t)delta_time;
@@ -66,10 +67,11 @@ int main() {
 
         Circuit_drop(&circuit);
 
-        fprintf(bench_data, "%zu %u %u\n", i, naive_time, sweep_time);
+        fprintf(bench_data, "%zu %u %u\n", i+1, naive_time, sweep_time);
         puts(TERM_GREEN("  ✓"));
     }
 
+    fprintf(bench_data, "%zu 0 0\n", files_count); // placeholder
     fclose(bench_data);
 
     Vec_drop(&files, (void (*)(void*))vec_str_drop);

@@ -34,11 +34,12 @@ typedef struct {
     BreakpointData data;
 } Breakpoint;
 
-void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment);
 int32_t Breakpoint_get_x(const Breakpoint* b);
-bool break_order(const Breakpoint* a, const Breakpoint* b);
-BinaryHeap build_breakpoints(const Circuit* c);
-void sweep_remove_segment(Vec* segments, const BreakpointData* d);
+bool sweep_order(const Breakpoint* a, const Breakpoint* b);
+void sweep_memorize(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment);
+BinaryHeap sweep_init(const Circuit* c);
+void sweep_comes_across(Vec* segments, BreakpointData* d);
+void sweep_goes_past(Vec* segments, const BreakpointData* d);
 void sweep_check_intersections(IntersectionVec* intersections, const Vec* segments, BreakpointData d);
 
 #define SYNTAX_ERROR(desc) {                        \
@@ -288,7 +289,20 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
     return intersections;
 }
 
-void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment) {
+int32_t Breakpoint_get_x(const Breakpoint* b) {
+    BreakpointType t = b->type;
+    if (t == H_SEGMENT_BEGIN) {
+        return b->data.ref.beg->x;
+    } else {
+        return b->data.ref.end->x;
+    }
+}
+
+bool sweep_order(const Breakpoint* a, const Breakpoint* b) {
+    return Breakpoint_get_x(a) < Breakpoint_get_x(b);
+}
+
+void sweep_memorize(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Segment* segment) {
     const Point* beg = Vec_get(&net->points, segment->beg);
     const Point* end = Vec_get(&net->points, segment->end);
     BreakpointData data = { .net = n, .seg = s, { .beg = beg, .end = end } };
@@ -304,22 +318,9 @@ void register_break(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Se
     }
 }
 
-int32_t Breakpoint_get_x(const Breakpoint* b) {
-    BreakpointType t = b->type;
-    if (t == H_SEGMENT_BEGIN) {
-        return b->data.ref.beg->x;
-    } else {
-        return b->data.ref.end->x;
-    }
-}
-
-bool break_order(const Breakpoint* a, const Breakpoint* b) {
-    return Breakpoint_get_x(a) < Breakpoint_get_x(b);
-}
-
-BinaryHeap build_breakpoints(const Circuit* c) {
+BinaryHeap sweep_init(const Circuit* c) {
     BinaryHeap breakpoints = BinaryHeap_new(sizeof(Breakpoint),
-                                            (bool (*)(const void*, const void*))break_order);
+                                            (bool (*)(const void*, const void*))sweep_order);
 
     size_t net_count = Vec_len(&c->nets);
     for (size_t n = 0; n < net_count; n++) {
@@ -329,14 +330,18 @@ BinaryHeap build_breakpoints(const Circuit* c) {
         for (size_t s = 0; s < segment_count; s++) {
             const Segment* segment = Vec_get(&net->segments, s);
 
-            register_break(&breakpoints, n, net, s, segment);
+            sweep_memorize(&breakpoints, n, net, s, segment);
         }
     }
 
     return breakpoints;
 }
 
-void sweep_remove_segment(Vec* segments, const BreakpointData* d) {
+void sweep_comes_across(Vec* segments, BreakpointData* d) {
+    Vec_push(segments, d);
+}
+
+void sweep_goes_past(Vec* segments, const BreakpointData* d) {
     size_t seg_count = Vec_len(segments);
 
     for (size_t i = 0; i < seg_count; i++) {
@@ -372,16 +377,16 @@ void sweep_check_intersections(IntersectionVec* intersections, const Vec* segmen
 }
 
 IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
-    BinaryHeap breakpoints = build_breakpoints(c);
+    BinaryHeap breakpoints = sweep_init(c);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     Vec segments = Vec_new(sizeof(BreakpointData));
 
     Breakpoint breakpoint;
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
         switch (breakpoint.type) {
-            case H_SEGMENT_BEGIN: Vec_push(&segments, &breakpoint.data);
+            case H_SEGMENT_BEGIN: sweep_comes_across(&segments, &breakpoint.data);
                 break;
-            case H_SEGMENT_END: sweep_remove_segment(&segments, &breakpoint.data);
+            case H_SEGMENT_END: sweep_goes_past(&segments, &breakpoint.data);
                 break;
             case V_SEGMENT: sweep_check_intersections(&intersections, &segments, breakpoint.data);
                 break;
