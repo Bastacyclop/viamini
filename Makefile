@@ -1,16 +1,13 @@
-vpath %.c src
-vpath %.h src
-vpath %.o build
-
-SRCDIR = src
-BUILDIR = build
-CFLAGS = -W -Wall -Werror -pedantic -pedantic-errors -std=c11
+SRCDIR := src
+BLDDIR := build
+TSTDIR := tests
+CFLAGS := -W -Wall -Werror -pedantic -pedantic-errors -std=c11
 
 ifeq ($(RELEASE), yes)
-	CC = gcc
+	CC := gcc
 	CFLAGS += -O3
 else
-	CC = clang
+	CC := clang
 	CFLAGS += -g3 -fstack-protector-all -Wshadow -Wunreachable-code \
 		  -Wstack-protector -pedantic-errors -O0 -W -Wundef \
 		  -Wfatal-errors -Wstrict-prototypes -Wmissing-prototypes \
@@ -22,18 +19,16 @@ else
 		  -fno-omit-frame-pointer -Winline -fstrict-aliasing
 endif
 
-all: build/main
+all: $(BLDDIR)/main
 
-builddir:
-	@mkdir -p build
-
-testdir:
-	@mkdir -p build/tests
+$(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
+	@echo "Compiling $< into $@"
+	@$(CC) -c $(CFLAGS) $< -o $@
 
 .PHONY: test
-test: build/tests/vec build/tests/binary_heap
+test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/binary_heap
 	@echo "[33m--------------- running tests ---------------[0m"
-	@for t in build/tests/*; do \
+	@for t in $(BLDDIR)/tests/*; do \
 	  if "./$$t"; then \
 	    echo "[32m$$t: ✓[0m"; \
 	  else \
@@ -42,30 +37,35 @@ test: build/tests/vec build/tests/binary_heap
 	done
 	@echo "[33m---------------------------------------------[0m"
 
+.PHONY: bench
+bench: $(BLDDIR)/bench
+	@echo "[33m---------------- benchmarking ----------------[0m"
+	@if "./$(BLDDIR)/bench"; then \
+	  echo "[32mbenchmarked[0m"; \
+	else \
+	  echo "[31mbenchmark failed[0m"; \
+	fi && \
+	gnuplot < plot_cmds
+	@echo "[33m---------------------------------------------[0m"
+
+$(BLDDIR)/bench: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/bench
+	
+$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/main
+
+$(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec
+
+$(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/binary_heap
+
+builddir:
+	@mkdir -p $(BLDDIR)
+
+testdir:
+	@mkdir -p $(BLDDIR)/tests
+
 .PHONY: clean
 clean:
-	rm -rf build/*
-
-build/main: main.c output.o circuit.o vec.o util.o builddir
-	$(CC) $(CFLAGS) -lm src/main.c build/output.o build/circuit.o build/binary_heap.o build/vec.o build/util.o -o build/main
-
-output.o: output.h output.c circuit.o builddir
-	$(CC) -c $(CFLAGS) src/output.c -o build/output.o
-
-circuit.o: circuit.h circuit.c vec.o binary_heap.o builddir
-	$(CC) -c $(CFLAGS) src/circuit.c -o build/circuit.o
-
-binary_heap.o: binary_heap.h binary_heap.c vec.o builddir
-	$(CC) -c $(CFLAGS) src/binary_heap.c -o build/binary_heap.o
-
-vec.o: vec.h vec.c util.o builddir
-	$(CC) -c $(CFLAGS) src/vec.c -o build/vec.o
-
-util.o: util.h util.c builddir
-	$(CC) -c $(CFLAGS) src/util.c -o build/util.o
-
-build/tests/vec: vec.c vec.o util.o testdir
-	$(CC) $(CFLAGS) tests/vec.c build/vec.o build/util.o -o build/tests/vec
-
-build/tests/binary_heap: tests/binary_heap.c binary_heap.o vec.o testdir
-	$(CC) $(CFLAGS) tests/binary_heap.c build/binary_heap.o build/vec.o build/util.o -o build/tests/binary_heap
+	rm -rf $(BLDDIR)

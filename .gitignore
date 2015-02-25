@@ -1,3 +1,6 @@
 build/*
 netlists/*.ps
 netlists/*.svg
+
+bench_data
+bench_plot.png
