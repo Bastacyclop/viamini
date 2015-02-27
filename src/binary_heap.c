@@ -74,7 +74,7 @@ void may_bubble_up(BinaryHeap* bh, size_t i) {
     }
 }
 
-void BinaryHeap_insert(BinaryHeap* bh, void* elem) {
+void BinaryHeap_push(BinaryHeap* bh, void* elem) {
     size_t i = Vec_len(&bh->vec);
     Vec_push(&bh->vec, elem);
     may_bubble_up(bh, i);

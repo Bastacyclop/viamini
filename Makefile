@@ -26,7 +26,7 @@ $(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
 	@$(CC) -c $(CFLAGS) $< -o $@
 
 .PHONY: test
-test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/binary_heap
+test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/binary_heap $(BLDDIR)/tests/bit_set
 	@echo "[33m--------------- running tests ---------------[0m"
 	@for t in $(BLDDIR)/tests/*; do \
 	  if "./$$t"; then \
@@ -59,6 +59,12 @@ $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 
 $(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/binary_heap
+
+#$(BLDDIR)/tests/avl_tree: $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o testdir
+#	$(CC) $(CFLAGS) $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/avl_tree
+
+$(BLDDIR)/tests/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/bit_set
 
 builddir:
 	@mkdir -p $(BLDDIR)

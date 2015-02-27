@@ -10,6 +10,7 @@ typedef struct {
 } BinaryHeap;
 
 // TODO: with_capacity, reserve, reserve_exact, shrink_to_fit, ...
+//       replace, push_pop, peek
 
 /// Creates an empty heap that will contain elements of size `elem_size`
 /// and be sorted with `predicate`.
@@ -33,10 +34,10 @@ void BinaryHeap_drop(BinaryHeap* bh, void (*drop_elem)(void*));
 /// Releases the heap resources.
 void BinaryHeap_plain_drop(BinaryHeap* bh);
 
-/// Inserts an element in the heap.
+/// Pushes an element in the heap.
 /// The element is copied from `e`.
 /// The heap may be reorganised to keep its properties.
-void BinaryHeap_insert(BinaryHeap* bh, void* e);
+void BinaryHeap_push(BinaryHeap* bh, void* e);
 
 /// Pops the lower element of the heap (according to its ordering).
 /// Returns `true` if an element was popped.

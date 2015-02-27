@@ -68,7 +68,7 @@ int main() {
         Circuit_drop(&circuit);
 
         fprintf(bench_data, "%zu %u %u\n", i+1, naive_time, sweep_time);
-        puts(TERM_GREEN("  ✓"));
+        puts(TERM_GREEN("   ✓"));
     }
 
     fprintf(bench_data, "%zu 0 0\n", files_count); // placeholder

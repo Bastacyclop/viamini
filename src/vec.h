@@ -40,6 +40,9 @@ void Vec_plain_drop(Vec* v);
 /// Reserves capacity for at least `needed` more elements.
 void Vec_reserve(Vec* v, size_t needed);
 
+/// Reserves capacity for at least `len` elements in total.
+void Vec_reserve_len(Vec* v, size_t len);
+
 /// Retrieves a pointer to the element of index `i` in the vector.
 /// Index out of bounds results in undefined behavior.
 void* Vec_unsafe_get_mut(Vec* v, size_t i);

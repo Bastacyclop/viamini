@@ -12,7 +12,7 @@ int main() {
 
     int32_t t[] = { 1, 0, 4, 2, 3, 5 };
     for (size_t i = 0; i <= 5; i++) {
-        BinaryHeap_insert(&bh, t + i);
+        BinaryHeap_push(&bh, t + i);
     }
 
     for (int32_t i = 0; i <= 5; i++) {

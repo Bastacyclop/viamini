@@ -309,12 +309,12 @@ void sweep_memorize(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Se
 
     if (beg->x == end->x) { // |
         Breakpoint breakpoint = { .type = V_SEGMENT, .data = data };
-        BinaryHeap_insert(bh, &breakpoint);
+        BinaryHeap_push(bh, &breakpoint);
     } else { // -
         Breakpoint breakpoint = { .type = H_SEGMENT_BEGIN, .data = data };
-        BinaryHeap_insert(bh, &breakpoint);
+        BinaryHeap_push(bh, &breakpoint);
         breakpoint.type = H_SEGMENT_END;
-        BinaryHeap_insert(bh, &breakpoint);
+        BinaryHeap_push(bh, &breakpoint);
     }
 }
 

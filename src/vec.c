@@ -81,9 +81,13 @@ void Vec_plain_drop(Vec* v) {
 
 void Vec_reserve(Vec* v, size_t needed) {
     size_t new_len = needed + v->len;
-    if (new_len <= v->cap) return;
+    Vec_reserve_len(v, new_len);
+}
 
-    size_t new_cap = next_power_of_two(new_len);
+void Vec_reserve_len(Vec* v, size_t len) {
+    if (len <= v->cap) return;
+
+    size_t new_cap = next_power_of_two(len);
     v->data = realloc(v->data, v->elem_size*new_cap);
     assert_alloc(v->data);
     v->cap = new_cap;
