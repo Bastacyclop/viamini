@@ -4,10 +4,7 @@
 #include "output.h"
 
 Vec find_netlists(void);
-char* change_extension(const char* path, const char* ext);
 void handle(char* path);
-
-#define TERM_GREEN(str) "\x1B[32m"str"\033[0m"
 
 Vec find_netlists() {
     system("find netlists/*.net > netlists.tmp");
@@ -25,19 +22,6 @@ Vec find_netlists() {
     system("rm netlists.tmp");
 
     return files;
-}
-
-char* change_extension(const char* path, const char* ext) {
-    char* sep = strchr(path, '.');
-    assert(sep);
-    size_t name_len = sep - path;
-    size_t ext_len = strlen(ext);
-    // +1 for `.` and +1 for `\0`
-    char* res = malloc((name_len+1+ext_len+1)*sizeof(char));
-    memcpy(res, path, name_len);
-    res[name_len] = '.';
-    memcpy(res+name_len+1, ext, ext_len+1);
-    return res;
 }
 
 void handle(char* path) {

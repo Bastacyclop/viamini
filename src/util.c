@@ -5,6 +5,19 @@ void cut_at_newline(char* s) {
     if (pos) { *pos = '\0'; }
 }
 
+char* change_extension(const char* path, const char* ext) {
+    char* sep = strchr(path, '.');
+    assert(sep);
+    size_t name_len = sep - path;
+    size_t ext_len = strlen(ext);
+    // +1 for `.` and +1 for `\0`
+    char* res = malloc((name_len+1+ext_len+1)*sizeof(char));
+    memcpy(res, path, name_len);
+    res[name_len] = '.';
+    memcpy(res+name_len+1, ext, ext_len+1);
+    return res;
+}
+
 void ask(const char* msg, const char* format, void* ptr) {
     char input[255];
     LOOP {

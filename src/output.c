@@ -47,36 +47,6 @@ Color ColorSet_pop(ColorSet* cs) {
     return c;
 }
 
-void ps_set_color(FILE* f, Color c) {
-    #define to_ps(x) (float)(x)/255.
-    fprintf(f, "%f %f %f setrgbcolor\n", to_ps(c.r), to_ps(c.g), to_ps(c.b));
-    #undef to_ps
-}
-
-#define x_trans(X) t->scale*(float)(X+t->translate.x)
-#define y_trans(Y) t->scale*(float)(Y+t->translate.y)
-
-void ps_draw_line(FILE* f, Point a, Point b, const Transform* t) {
-    fprintf(f, "%f %f moveto\n", x_trans(a.x), y_trans(a.y));
-    fprintf(f, "%f %f lineto\n", x_trans(b.x), y_trans(b.y));
-    fputs("stroke\n", f);
-}
-
-void ps_draw_point(FILE* f, Point p, const Transform* t) {
-    fprintf(f, "%f %f 1.5 0 360 arc\n", x_trans(p.x), y_trans(p.y));
-    fputs("fill\n", f);
-}
-
-#undef x_trans
-#undef y_trans
-
-Transform compute_ps_transform(const AABB* aabb) {
-    return (Transform) {
-        .translate = { -aabb->inf.x, -aabb->inf.y },
-        .scale = 600. / (float)(aabb->sup.x - aabb->inf.x)
-    };
-}
-
 void Circuit_to_ps(const Circuit* c, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) {
@@ -111,6 +81,36 @@ void Circuit_to_ps(const Circuit* c, const char* path) {
     fclose(f);
 }
 
+void ps_set_color(FILE* f, Color c) {
+    #define to_ps(x) (float)(x)/255.
+    fprintf(f, "%f %f %f setrgbcolor\n", to_ps(c.r), to_ps(c.g), to_ps(c.b));
+    #undef to_ps
+}
+
+#define x_trans(X) t->scale*(float)(X+t->translate.x)
+#define y_trans(Y) t->scale*(float)(Y+t->translate.y)
+
+void ps_draw_line(FILE* f, Point a, Point b, const Transform* t) {
+    fprintf(f, "%f %f moveto\n", x_trans(a.x), y_trans(a.y));
+    fprintf(f, "%f %f lineto\n", x_trans(b.x), y_trans(b.y));
+    fputs("stroke\n", f);
+}
+
+void ps_draw_point(FILE* f, Point p, const Transform* t) {
+    fprintf(f, "%f %f 1.5 0 360 arc\n", x_trans(p.x), y_trans(p.y));
+    fputs("fill\n", f);
+}
+
+#undef x_trans
+#undef y_trans
+
+Transform compute_ps_transform(const AABB* aabb) {
+    return (Transform) {
+        .translate = { -aabb->inf.x, -aabb->inf.y },
+        .scale = 600. / (float)(aabb->sup.x - aabb->inf.x)
+    };
+}
+
 void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
                                  const char* base_path, const char* file_path) {
     FILE* base = fopen(base_path, "r");
@@ -137,6 +137,44 @@ void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
     for (size_t i = 0; i < Vec_len(intersections); i++) {
         const Intersection* intersection = Vec_get(intersections, i);
         ps_draw_point(f, intersection->sect, &trans);
+    }
+
+    fclose(f);
+}
+
+void Circuit_to_svg(const Circuit* c, const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) {
+        perror("cannot open svg file");
+        exit(1);
+    }
+
+    fputs("<svg version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\">\n", f);
+
+    size_t net_count = Vec_len(&c->nets);
+    ColorSet colors = ColorSet_new(net_count);
+    Transform trans = compute_svg_transform(&c->aabb);
+
+    for (size_t i = 0; i < net_count; i++) {
+        const Net* net = Vec_get(&c->nets, i);
+        size_t point_count = Vec_len(&net->points);
+        size_t segment_count = Vec_len(&net->segments);
+
+        svg_begin_color(f, ColorSet_pop(&colors));
+
+        for (size_t s = 0; s < segment_count; s++) {
+            const Segment* segment = Vec_get(&net->segments, s);
+            const Point* beg = Vec_get(&net->points, segment->beg);
+            const Point* end = Vec_get(&net->points, segment->end);
+            svg_draw_line(f, *beg, *end, &trans);
+        }
+
+        for (size_t p = 0; p < point_count; p++) {
+            const Point* point = Vec_get(&net->points, p);
+            svg_draw_point(f, *point, &trans);
+        }
+
+        svg_end_color(f);
     }
 
     fclose(f);
@@ -176,45 +214,6 @@ Transform compute_svg_transform(const AABB* aabb) {
     };
 }
 
-void Circuit_to_svg(const Circuit* c, const char* path) {
-    FILE* f = fopen(path, "w");
-    if (!f) {
-        perror("cannot open svg file");
-        exit(1);
-    }
-
-    fputs("<svg version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\">\n", f);
-
-    size_t net_count = Vec_len(&c->nets);
-    ColorSet colors = ColorSet_new(net_count);
-    Transform trans = compute_svg_transform(&c->aabb);
-
-    for (size_t i = 0; i < net_count; i++) {
-        const Net* net = Vec_get(&c->nets, i);
-        size_t point_count = Vec_len(&net->points);
-        size_t segment_count = Vec_len(&net->segments);
-
-        svg_begin_color(f, ColorSet_pop(&colors));
-
-        for (size_t s = 0; s < segment_count; s++) {
-            const Segment* segment = Vec_get(&net->segments, s);
-            const Point* beg = Vec_get(&net->points, segment->beg);
-            const Point* end = Vec_get(&net->points, segment->end);
-            svg_draw_line(f, *beg, *end, &trans);
-        }
-
-        for (size_t p = 0; p < point_count; p++) {
-            const Point* point = Vec_get(&net->points, p);
-            svg_draw_point(f, *point, &trans);
-        }
-
-        svg_end_color(f);
-    }
-
-    fclose(f);
-
-}
-
 void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
                                   const char* base_path, const char* file_path) {
     FILE* base = fopen(base_path, "r");
@@ -246,5 +245,4 @@ void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
     svg_end_color(f);
 
     fclose(f);
-
 }

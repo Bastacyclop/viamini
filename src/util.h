@@ -11,8 +11,13 @@
 
 #define LOOP while (true)
 
+#define TERM_GREEN(str) "\x1B[32m"str"\033[0m"
+
 /// Replaces the first '\n' found by '\0'.
 void cut_at_newline(char* s);
+
+/// Returns a new file path with the extension `ext`.
+char* change_extension(const char* path, const char* ext);
 
 /// Prints a message and waits for an input.
 /// Loops while the format is not respected.

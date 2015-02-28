@@ -13,10 +13,10 @@ void may_bubble_down(BinaryHeap* bh, size_t i);
 
 size_t heap_get_mut_lower_child(BinaryHeap* bh, size_t i, void** e);
 
-BinaryHeap BinaryHeap_new(size_t elem_size, bool (*predicate)(const void*, const void*)) {
+BinaryHeap BinaryHeap_new(size_t elem_size, bool (*strict_order)(const void*, const void*)) {
     return (BinaryHeap) {
         .vec = Vec_new(elem_size),
-        .predicate = predicate
+        .strict_order = strict_order
     };
 }
 
@@ -68,7 +68,7 @@ void may_bubble_up(BinaryHeap* bh, size_t i) {
     void* parent = Vec_unsafe_get_mut(&bh->vec, p);
     void* elem = Vec_unsafe_get_mut(&bh->vec, i);
 
-    if ((*bh->predicate)(elem, parent)) {
+    if ((*bh->strict_order)(elem, parent)) {
         swap(bh, elem, parent);
         may_bubble_up(bh, p);
     }
@@ -89,7 +89,7 @@ void may_bubble_down(BinaryHeap* bh, size_t i) {
     if (!target) return;
 
     void* elem = Vec_unsafe_get_mut(&bh->vec, i);
-    if ((*bh->predicate)(target, elem)) {
+    if ((*bh->strict_order)(target, elem)) {
         swap(bh, elem, target);
         may_bubble_down(bh, index);
     }
@@ -109,7 +109,7 @@ size_t heap_get_mut_lower_child(BinaryHeap* bh, size_t i, void** e) {
     }
     void* right_child = Vec_unsafe_get_mut(&bh->vec, rc);
 
-    if ((*bh->predicate)(left_child, right_child)) {
+    if ((*bh->strict_order)(left_child, right_child)) {
         *e = left_child;
         return lc;
     } else {

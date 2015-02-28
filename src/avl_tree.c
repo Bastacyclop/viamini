@@ -137,16 +137,18 @@ AVLNode** find_largest_entry(AVLNode** np) {
     return np;
 }
 
-bool AVLTree_remove(AVLTree* avl, void* e) {
+void* AVLTree_remove(AVLTree* avl, void* e) {
     Vec path = Vec_new(sizeof(AVLNode**));
     AVLNode** entry = find_entry(avl, &avl->root, e, &path);
 
-    bool remove = *entry;
-    if (remove) {
+    void* removed = NULL;
+    if (*entry) {
         AVLNode** p = entry;
+        removed = (*entry)->elem;
+
         if ((*entry)->left && (*entry)->right) {
             AVLNode** x = find_largest_entry(&(*entry)->left);
-            mem_swap(&(*entry)->elem, &(*x)->elem, sizeof(void*));
+            (*entry)->elem = (*x)->elem;
             p = x;
         }
 
@@ -164,7 +166,7 @@ bool AVLTree_remove(AVLTree* avl, void* e) {
     }
 
     Vec_plain_drop(&path);
-    return remove;
+    return removed;
 }
 
 void rebalance_unloaded_path(Vec* path) {

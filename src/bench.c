@@ -4,10 +4,7 @@
 #include "output.h"
 
 Vec find_netlists(void);
-char* change_extension(const char* path, const char* ext);
 void vec_str_drop(char** s);
-
-#define TERM_GREEN(str) "\x1B[32m"str"\033[0m"
 
 #define measure_exec_time(msg, block)                                   \
     time_mark = clock();                                                \
@@ -40,10 +37,9 @@ int main() {
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
-    fputs("0 0 0\n", bench_data); // placeholder
+    fprintf(bench_data, "%zu 0 0\n", Vec_len(&paths)); // placeholder
 
     char* path;
-    size_t i = 1;
     while (Vec_pop(&paths, &path)) {
         printf(" - handling `%s`:\n", path);
 
@@ -63,14 +59,12 @@ int main() {
 
         Circuit_drop(&circuit);
 
-        fprintf(bench_data, "%zu %u %u\n", i, naive_time, sweep_time);
+        fprintf(bench_data, "%zu %u %u\n", Vec_len(&paths), naive_time, sweep_time);
         puts(TERM_GREEN("   ✓"));
         free(path);
-
-        i++;
     }
 
-    fprintf(bench_data, "%zu 0 0\n", i); // placeholder
+    fputs("0 0 0\n", bench_data); // placeholder
     fclose(bench_data);
 
     Vec_plain_drop(&paths);

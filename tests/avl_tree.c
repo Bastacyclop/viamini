@@ -28,14 +28,16 @@ int8_t cmp(size_t a, size_t b) {
 int main() {
     AVLTree avl = AVLTree_new((int8_t (*)(const void*, const void*))cmp);
 
-    size_t t[] = { 1, 0, 4, 2, 3, 5 };
+    // We are cheating on void* so avoid 0 or it will conflict with NULL.
+    size_t t[] = { 1, 6, 4, 2, 3, 5 };
     for (size_t i = 0; i <= 5; i++) {
         AVLTree_insert(&avl, (void*)t[i]);
     }
 
-    for (size_t i = 0; i <= 5; i++) {
-        bool removed = AVLTree_remove(&avl, (void*)i);
+    for (size_t i = 1; i <= 6; i++) {
+        void* removed = AVLTree_remove(&avl, (void*)i);
         assert(removed);
+        assert((size_t)removed == i);
     }
 
     AVLTree_plain_clear(&avl);
