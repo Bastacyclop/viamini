@@ -58,5 +58,6 @@ def_max_min_for(int32_t)
 def_max_min_for(int64_t)
 def_max_min_for(float)
 def_max_min_for(double)
+def_max_min_for(int)
 
 #endif // UTIL_H

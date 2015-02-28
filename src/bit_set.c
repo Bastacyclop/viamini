@@ -102,14 +102,16 @@ size_t BitSet_capacity(const BitSet* set) {
 void BitSet_grow_to(BitSet* set, size_t nbits) {
     size_t old_blocks = Vec_len(&set->storage);
     size_t blocks = blocks_for_bits(nbits);
-    Vec_reserve_len(&set->storage, blocks);
 
     if (blocks > old_blocks) {
+        Vec_reserve_len(&set->storage, blocks);
+
         Block* new_begin = Vec_unsafe_get_mut(&set->storage, old_blocks);
         memset(new_begin, 0, sizeof(Block)*(blocks - old_blocks));
+
+        set->storage.len = blocks;
     }
 
-    set->storage.len = blocks;
     set->nbits = nbits;
 }
 
