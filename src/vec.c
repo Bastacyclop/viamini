@@ -1,7 +1,8 @@
 #include "vec.h"
 
-void drop_elems(Vec* v, void (*drop_elem)(void*));
 void assert_bound(const Vec* v, size_t i);
+
+void drop_elems(Vec* v, void (*drop_elem)(void*));
 
 Vec Vec_new(size_t elem_size) {
     return (Vec) {
@@ -46,14 +47,6 @@ const void* Vec_unsafe_get(const Vec* v, size_t i) {
     return &data[i*v->elem_size];
 }
 
-void assert_bound(const Vec* v, size_t i) {
-    // using size_t so i > 0
-    if (i > v->len) {
-        perror("Vec index out of bounds");
-        exit(1);
-    }
-}
-
 void* Vec_get_mut(Vec* v, size_t i) {
     assert_bound(v, i);
     return Vec_unsafe_get_mut(v, i);
@@ -64,9 +57,11 @@ const void* Vec_get(const Vec* v, size_t i) {
     return Vec_unsafe_get(v, i);
 }
 
-void drop_elems(Vec* v, void (*drop_elem)(void*)) {
-    for (uint32_t i = 0; i < v->len; i++) {
-        (*drop_elem)(Vec_unsafe_get_mut(v, i));
+void assert_bound(const Vec* v, size_t i) {
+    // using size_t so i > 0
+    if (i > v->len) {
+        perror("Vec index out of bounds");
+        exit(1);
     }
 }
 
@@ -77,6 +72,12 @@ void Vec_drop(Vec* v, void (*drop_elem)(void*)) {
 
 void Vec_plain_drop(Vec* v) {
     free(v->data);
+}
+
+void drop_elems(Vec* v, void (*drop_elem)(void*)) {
+    for (uint32_t i = 0; i < v->len; i++) {
+        (*drop_elem)(Vec_unsafe_get_mut(v, i));
+    }
 }
 
 void Vec_reserve(Vec* v, size_t needed) {
@@ -119,7 +120,7 @@ void Vec_plain_clear(Vec* v) {
     v->len = 0;
 }
 
-void Vec_swap_remove(Vec* v, void* e, size_t i) {
+void Vec_swap_remove(Vec* v, size_t i, void* e) {
     assert_bound(v, i);
     size_t len = Vec_len(v);
 

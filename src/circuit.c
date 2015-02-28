@@ -5,8 +5,10 @@ void point_from_line(Vec* points, const char* line);
 void segment_from_line(Vec* segments, const char* line);
 void check_net_segments(Net* net);
 Net net_from_file(FILE* f);
+
 void AABB_include(AABB* aabb, Point p);
 AABB compute_aabb(Vec* nets);
+
 void drop_net(Net* net);
 
 typedef struct {
@@ -216,7 +218,6 @@ bool hv_intersects(SegmentRef h, SegmentRef v) {
 bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect) {
     if (a.beg->x == a.end->x) { // |
         if (b.beg->x == b.end->x) { // | & |
-            //assert(a.beg->x != b.beg->x);
             return false;
        } else { // | & -
             if (hv_intersects(b, a)) {
@@ -229,7 +230,6 @@ bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect) {
        }
     } else { // -
         if (b.beg->y == b.end->y) { // - & -
-            //assert(a.beg->y != b.beg->y);
             return false;
         } else { // - & |
             if (hv_intersects(a, b)) {
@@ -347,8 +347,8 @@ void sweep_goes_past(Vec* segments, const BreakpointData* d) {
     for (size_t i = 0; i < seg_count; i++) {
         const BreakpointData* d_i = Vec_get(segments, i);
 
-        if (memcmp(d, d_i, 2*sizeof(size_t)) == 0) {
-            Vec_swap_remove(segments, NULL, i);
+        if (memcmp(d, d_i, 2*sizeof(size_t)) == 0) { // FIXME: ugly
+            Vec_swap_remove(segments, i, NULL);
             return;
         }
     }

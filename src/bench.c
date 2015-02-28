@@ -34,24 +34,20 @@ Vec find_netlists() {
     return files;
 }
 
-void vec_str_drop(char** s) {
-    free(*s);
-}
-
 int main() {
-    Vec files = find_netlists();
-    size_t files_count = Vec_len(&files);
+    Vec paths = find_netlists();
 
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
     fputs("0 0 0\n", bench_data); // placeholder
 
-    for (size_t i = 0; i < files_count; i++) {
-        const char* file = *(const char* const*)Vec_get(&files, i);
-        printf(" - handling `%s`:\n", file);
+    char* path;
+    size_t i = 1;
+    while (Vec_pop(&paths, &path)) {
+        printf(" - handling `%s`:\n", path);
 
-        Circuit circuit = Circuit_from_file(file);
+        Circuit circuit = Circuit_from_file(path);
 
         measure_exec_time("   intersections naive",
             Vec intersections = Circuit_intersections_naive(&circuit);
@@ -67,14 +63,17 @@ int main() {
 
         Circuit_drop(&circuit);
 
-        fprintf(bench_data, "%zu %u %u\n", i+1, naive_time, sweep_time);
+        fprintf(bench_data, "%zu %u %u\n", i, naive_time, sweep_time);
         puts(TERM_GREEN("   ✓"));
+        free(path);
+
+        i++;
     }
 
-    fprintf(bench_data, "%zu 0 0\n", files_count); // placeholder
+    fprintf(bench_data, "%zu 0 0\n", i); // placeholder
     fclose(bench_data);
 
-    Vec_drop(&files, (void (*)(void*))vec_str_drop);
+    Vec_plain_drop(&paths);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

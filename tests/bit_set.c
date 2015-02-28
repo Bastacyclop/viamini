@@ -34,4 +34,6 @@ int main() {
     assert(BitSet_is_empty(&set));
 
     BitSet_drop(&set);
+
+    return EXIT_SUCCESS;
 }

@@ -79,6 +79,6 @@ void Vec_plain_clear(Vec* v);
 /// Removes an element from the vector, replacing it with the last element.
 /// The removed element is copied to `e` if `e` is not `NULL`.
 /// Index out of bounds results in an error.
-void Vec_swap_remove(Vec* v, void* e, size_t i);
+void Vec_swap_remove(Vec* v, size_t i, void* e);
 
 #endif // VEC_H

@@ -39,4 +39,6 @@ int main() {
     }
 
     AVLTree_plain_clear(&avl);
+
+    return EXIT_SUCCESS;
 }

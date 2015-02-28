@@ -90,5 +90,5 @@ int main() {
 
     Vec_plain_drop(&threads);
 
-    return 0;
+    return EXIT_SUCCESS;
 }

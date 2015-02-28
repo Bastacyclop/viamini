@@ -12,13 +12,16 @@ typedef enum {
 } Balance;
 
 AVLNode* new_node(void* e);
+
 void rotate_left(AVLNode** root);
 void rotate_right(AVLNode** root);
 void rebalance_node(AVLNode** n);
 void rebalance_loaded_path(Vec* path);
 void rebalance_unloaded_path(Vec* path);
+
 AVLNode** find_entry(AVLTree* avl, AVLNode** np, void* e, Vec* path);
 AVLNode** find_largest_entry(AVLNode** np);
+
 void may_drop_node(AVLNode* n, void (*drop_elem)(void*));
 void may_plain_drop_node(AVLNode* n);
 
@@ -83,34 +86,6 @@ void rebalance_node(AVLNode** n) {
     }
 }
 
-void rebalance_loaded_path(Vec* path) {
-    if (Vec_len(path) < 2) return;
-
-    AVLNode** n;
-    Vec_pop(path, &n);
-    AVLNode** p;
-    while (Vec_pop(path, &p)) {
-        (*p)->balance += (*n == (*p)->left) ? (LEFT) : (RIGHT);
-        rebalance_node(p);
-
-        n = p;
-    }
-}
-
-void rebalance_unloaded_path(Vec* path) {
-    if (Vec_len(path) < 2) return;
-
-    AVLNode** n;
-    Vec_pop(path, &n);
-    AVLNode** p;
-    while (Vec_pop(path, &p)) {
-        (*p)->balance -= (*n == (*p)->left) ? (LEFT) : (RIGHT);
-        rebalance_node(p);
-
-        n = p;
-    }
-}
-
 AVLNode** find_entry(AVLTree* avl, AVLNode** np, void* e, Vec* path) {
     AVLNode* n = *np;
     if (!n) return np;
@@ -138,6 +113,20 @@ bool AVLTree_insert(AVLTree* avl, void* e) {
 
     Vec_plain_drop(&path);
     return insert;
+}
+
+void rebalance_loaded_path(Vec* path) {
+    if (Vec_len(path) < 2) return;
+
+    AVLNode** n;
+    Vec_pop(path, &n);
+    AVLNode** p;
+    while (Vec_pop(path, &p)) {
+        (*p)->balance += (*n == (*p)->left) ? (LEFT) : (RIGHT);
+        rebalance_node(p);
+
+        n = p;
+    }
 }
 
 AVLNode** find_largest_entry(AVLNode** np) {
@@ -178,18 +167,17 @@ bool AVLTree_remove(AVLTree* avl, void* e) {
     return remove;
 }
 
-void may_drop_node(AVLNode* n, void (*drop_elem)(void*)) {
-    if (n) {
-        drop_elem(n->elem);
-        may_drop_node(n->left, drop_elem);
-        may_drop_node(n->right, drop_elem);
-    }
-}
+void rebalance_unloaded_path(Vec* path) {
+    if (Vec_len(path) < 2) return;
 
-void may_plain_drop_node(AVLNode* n) {
-    if (n) {
-        may_plain_drop_node(n->left);
-        may_plain_drop_node(n->right);
+    AVLNode** n;
+    Vec_pop(path, &n);
+    AVLNode** p;
+    while (Vec_pop(path, &p)) {
+        (*p)->balance -= (*n == (*p)->left) ? (LEFT) : (RIGHT);
+        rebalance_node(p);
+
+        n = p;
     }
 }
 
@@ -198,7 +186,22 @@ void AVLTree_clear(AVLTree* avl, void (*drop_elem)(void*)) {
     avl->root = NULL;
 }
 
+void may_drop_node(AVLNode* n, void (*drop_elem)(void*)) {
+    if (n) {
+        drop_elem(n->elem);
+        may_drop_node(n->left, drop_elem);
+        may_drop_node(n->right, drop_elem);
+    }
+}
+
 void AVLTree_plain_clear(AVLTree* avl) {
     may_plain_drop_node(avl->root);
     avl->root = NULL;
+}
+
+void may_plain_drop_node(AVLNode* n) {
+    if (n) {
+        may_plain_drop_node(n->left);
+        may_plain_drop_node(n->right);
+    }
 }

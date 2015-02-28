@@ -13,7 +13,22 @@ size_t block_bit_of(size_t value);
 bool block_get(Block b, size_t i);
 void block_set(Block* b, size_t i);
 void block_clear(Block* b, size_t i);
+
 void BitSet_grow_to(BitSet* set, size_t len);
+
+BitSet BitSet_new() {
+    return (BitSet) {
+        .storage = Vec_new(sizeof(Block)),
+        .nbits = 0
+    };
+}
+
+BitSet BitSet_with_capacity(size_t nbits) {
+    return (BitSet) {
+        .storage = Vec_with_capacity(blocks_for_bits(nbits), sizeof(Block)),
+        .nbits = 0
+    };
+}
 
 size_t blocks_for_bits(size_t bits) {
     size_t blocks = bits / bits_per_block;
@@ -41,20 +56,6 @@ void block_set(Block* b, size_t i) {
 
 void block_clear(Block* b, size_t i) {
     *b &= ~(1 << i);
-}
-
-BitSet BitSet_new() {
-    return (BitSet) {
-        .storage = Vec_new(sizeof(Block)),
-        .nbits = 0
-    };
-}
-
-BitSet BitSet_with_capacity(size_t nbits) {
-    return (BitSet) {
-        .storage = Vec_with_capacity(blocks_for_bits(nbits), sizeof(Block)),
-        .nbits = 0
-    };
 }
 
 void BitSet_drop(BitSet* set) {

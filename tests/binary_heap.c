@@ -22,4 +22,6 @@ int main() {
     }
 
     BinaryHeap_plain_drop(&bh);
+
+    return EXIT_SUCCESS;
 }

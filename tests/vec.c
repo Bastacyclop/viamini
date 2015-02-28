@@ -23,5 +23,5 @@ void simple() {
 int main() {
     simple();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
