@@ -1,4 +1,5 @@
 #include "binary_heap.h"
+#include "avl_tree.h"
 #include "circuit.h"
 
 Net net_from_file(FILE* f);
@@ -43,6 +44,12 @@ void sweep_memorize(BinaryHeap* bh, size_t n, const Net* net, size_t s, const Se
 void sweep_comes_across(Vec* segments, BreakpointData* d);
 void sweep_goes_past(Vec* segments, const BreakpointData* d);
 void sweep_check_intersections(IntersectionVec* intersections, const Vec* segments, BreakpointData d);
+
+const int32_t* y_from_breakpoint(const BreakpointData* b);
+int8_t compare(const int32_t* a, const int32_t* b);
+void avl_sweep_comes_across(AVLTree* segments, BreakpointData* d);
+void avl_sweep_goes_past(AVLTree* segments, int32_t y);
+void avl_sweep_check_intersections(IntersectionVec* intersections, const AVLTree* segments, BreakpointData d);
 
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
@@ -341,6 +348,8 @@ bool sweep_order(const Breakpoint* a, const Breakpoint* b) {
             return t_b == H_SEGMENT_END;
         } else if (t_b == V_SEGMENT) {
             return t_a == H_SEGMENT_BEGIN;
+        } else if (t_a == H_SEGMENT_END) {
+            return t_b == H_SEGMENT_BEGIN;
         }
         return false;
     }
@@ -407,6 +416,77 @@ void sweep_check_intersections(IntersectionVec* intersections, const Vec* segmen
                 .sect = sect
             };
             Vec_push(intersections, &intersection);
+        }
+    }
+}
+
+// We are assuming that there is no overlapping horizontal segments of the same y.
+IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c) {
+    BinaryHeap breakpoints = sweep_init(c);
+    IntersectionVec intersections = Vec_new(sizeof(Intersection));
+    AVLTree segments = AVLTree_new(sizeof(BreakpointData),
+                                   (const void* (*)(const void*))y_from_breakpoint,
+                                   (int8_t (*)(const void*, const void*))compare);
+
+    Breakpoint breakpoint;
+    while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
+        switch (breakpoint.type) {
+            case H_SEGMENT_BEGIN: avl_sweep_comes_across(&segments, &breakpoint.data);
+                break;
+            case H_SEGMENT_END: avl_sweep_goes_past(&segments, breakpoint.data.ref.beg->y);
+                break;
+            case V_SEGMENT: avl_sweep_check_intersections(&intersections, &segments, breakpoint.data);
+                break;
+        }
+    }
+
+    AVLTree_plain_clear(&segments);
+    BinaryHeap_plain_drop(&breakpoints);
+
+    return intersections;
+}
+
+const int32_t* y_from_breakpoint(const BreakpointData* b) {
+    return &b->ref.beg->y;
+}
+
+int8_t compare(const int32_t* a, const int32_t* b) {
+    if (*a < *b) return -1;
+    if (*a > *b) return 1;
+    return 0;
+}
+
+void avl_sweep_comes_across(AVLTree* segments, BreakpointData* d) {
+    AVLTree_insert(segments, d);
+}
+
+void avl_sweep_goes_past(AVLTree* segments, int32_t y) {
+    AVLTree_remove(segments, &y, NULL);
+}
+
+void avl_sweep_check_intersections(IntersectionVec* intersections, const AVLTree* segments, BreakpointData d) {
+    int32_t x = d.ref.beg->x;
+    int32_t y_min = d.ref.beg->y;
+    int32_t y_max = d.ref.end->y;
+
+    const AVLNode* n = AVLTree_find_sup_eq(segments, &y_min);
+    while (n) {
+        BreakpointData d_i = *(const BreakpointData*)(n->elem);
+        int32_t y = d_i.ref.beg->y;
+
+        if (d.net != d_i.net) {
+            Intersection intersection = {
+                .a_net = d.net, .a_seg = d.seg,
+                .b_net = d_i.net, .b_seg = d_i.seg,
+                .sect = (Point) { x, y }
+            };
+            Vec_push(intersections, &intersection);
+        }
+
+        if (y < y_max) {
+            break;
+        } else {
+            n = n->left;
         }
     }
 }

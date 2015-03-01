@@ -55,4 +55,8 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c);
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 IntersectionVec Circuit_intersections_sweep(const Circuit* c);
 
+/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
+/// This version uses an AVL tree to manage current horizontal segments.
+IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c);
+
 #endif // CIRCUIT_H

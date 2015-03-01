@@ -11,7 +11,7 @@ typedef enum {
     OVERRIGHT   =  2
 } Balance;
 
-AVLNode* new_node(void* e);
+AVLNode* new_node(void* e, size_t elem_size);
 
 void rotate_left(AVLNode** root);
 void rotate_right(AVLNode** root);
@@ -19,15 +19,18 @@ void rebalance_node(AVLNode** n);
 void rebalance_loaded_path(Vec* path);
 void rebalance_unloaded_path(Vec* path);
 
-AVLNode** find_entry(AVLTree* avl, AVLNode** np, void* e, Vec* path);
+AVLNode** find_entry(AVLTree* avl, AVLNode** np, const void* k, Vec* path);
 AVLNode** find_largest_entry(AVLNode** np);
 
 void may_drop_node(AVLNode* n, void (*drop_elem)(void*));
 void may_plain_drop_node(AVLNode* n);
 
-AVLTree AVLTree_new(int8_t (*compare)(const void*, const void*)) {
+AVLTree AVLTree_new(size_t elem_size, const void* (*key_from_elem)(const void*),
+                    int8_t (*compare)(const void*, const void*)) {
     return (AVLTree) {
         .root = NULL,
+        .elem_size = elem_size,
+        .key_of = key_from_elem,
         .cmp = compare
     };
 }
@@ -36,11 +39,14 @@ bool AVLTree_is_empty(const AVLTree* avl) {
     return !avl->root;
 }
 
-AVLNode* new_node(void* e) {
+AVLNode* new_node(void* e, size_t elem_size) {
     AVLNode* n = malloc(sizeof(AVLNode));
     assert_alloc(n);
+    void* elem = malloc(elem_size);
+    assert_alloc(elem);
+    memcpy(elem, e, elem_size);
 
-    *n = (AVLNode) { .elem = e, .balance = BALANCED, .left = NULL, .right = NULL };
+    *n = (AVLNode) { .balance = BALANCED, .left = NULL, .right = NULL, .elem = elem };
     return n;
 }
 
@@ -86,28 +92,30 @@ void rebalance_node(AVLNode** n) {
     }
 }
 
-AVLNode** find_entry(AVLTree* avl, AVLNode** np, void* e, Vec* path) {
+AVLNode** find_entry(AVLTree* avl, AVLNode** np, const void* k, Vec* path) {
     AVLNode* n = *np;
     if (!n) return np;
 
-    int8_t cmp = (*avl->cmp)(n->elem, e);
+    const void* nk = (*avl->key_of)(n->elem);
+    int8_t cmp = (*avl->cmp)(nk, k);
     if (cmp == 0) return np;
 
     Vec_push(path, &np);
     if (cmp < 0) {
-        return find_entry(avl, &n->left, e, path);
+        return find_entry(avl, &n->left, k, path);
     } else {
-        return find_entry(avl, &n->right, e, path);
+        return find_entry(avl, &n->right, k, path);
     }
 }
 
 bool AVLTree_insert(AVLTree* avl, void* e) {
     Vec path = Vec_new(sizeof(AVLNode**));
-    AVLNode** entry = find_entry(avl, &avl->root, e, &path);
+    const void* k = (*avl->key_of)(e);
+    AVLNode** entry = find_entry(avl, &avl->root, k, &path);
 
     bool insert = !*entry;
     if (insert) {
-        *entry = new_node(e);
+        *entry = new_node(e, avl->elem_size);
         rebalance_loaded_path(&path);
     }
 
@@ -137,18 +145,18 @@ AVLNode** find_largest_entry(AVLNode** np) {
     return np;
 }
 
-void* AVLTree_remove(AVLTree* avl, void* e) {
+bool AVLTree_remove(AVLTree* avl, const void* k, void* e) {
     Vec path = Vec_new(sizeof(AVLNode**));
-    AVLNode** entry = find_entry(avl, &avl->root, e, &path);
+    AVLNode** entry = find_entry(avl, &avl->root, k, &path);
 
-    void* removed = NULL;
-    if (*entry) {
+    bool remove = *entry;
+    if (remove) {
         AVLNode** p = entry;
-        removed = (*entry)->elem;
+        if (e) memcpy(e, (*entry)->elem, avl->elem_size);
 
         if ((*entry)->left && (*entry)->right) {
             AVLNode** x = find_largest_entry(&(*entry)->left);
-            (*entry)->elem = (*x)->elem;
+            memcpy((*entry)->elem, (*x)->elem, avl->elem_size);
             p = x;
         }
 
@@ -160,13 +168,14 @@ void* AVLTree_remove(AVLTree* avl, void* e) {
         } else {
             *p = NULL;
         }
+        free(target->elem);
         free(target);
 
         rebalance_unloaded_path(&path);
     }
 
     Vec_plain_drop(&path);
-    return removed;
+    return remove;
 }
 
 void rebalance_unloaded_path(Vec* path) {
@@ -190,9 +199,13 @@ void AVLTree_clear(AVLTree* avl, void (*drop_elem)(void*)) {
 
 void may_drop_node(AVLNode* n, void (*drop_elem)(void*)) {
     if (n) {
-        drop_elem(n->elem);
-        may_drop_node(n->left, drop_elem);
-        may_drop_node(n->right, drop_elem);
+        AVLNode* l = n->left;
+        AVLNode* r = n->right;
+        drop_elem((n)->elem);
+        free(n->elem);
+        free(n);
+        may_drop_node(l, drop_elem);
+        may_drop_node(r, drop_elem);
     }
 }
 
@@ -203,7 +216,31 @@ void AVLTree_plain_clear(AVLTree* avl) {
 
 void may_plain_drop_node(AVLNode* n) {
     if (n) {
-        may_plain_drop_node(n->left);
-        may_plain_drop_node(n->right);
+        AVLNode* l = n->left;
+        AVLNode* r = n->right;
+        free(n->elem);
+        free(n);
+        may_plain_drop_node(l);
+        may_plain_drop_node(r);
+    }
+}
+
+
+const AVLNode* find_sup_eq(const AVLTree* avl, const AVLNode* n, const void* k);
+
+const AVLNode* AVLTree_find_sup_eq(const AVLTree* avl, const void* k) {
+    return find_sup_eq(avl, avl->root, k);
+}
+
+const AVLNode* find_sup_eq(const AVLTree* avl, const AVLNode* n, const void* k) {
+    if (!n) return n;
+
+    const void* nk = (*avl->key_of)((n)->elem);
+    int8_t cmp = (*avl->cmp)(nk, k);
+
+    if (cmp < 0) {
+        return find_sup_eq(avl, n->left, k);
+    } else {
+        return n;
     }
 }

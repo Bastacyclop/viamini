@@ -4,3 +4,4 @@ netlists/*.svg
 
 bench_data
 bench_plot.png
+bench_plot_log.png

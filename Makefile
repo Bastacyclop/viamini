@@ -48,11 +48,11 @@ bench: $(BLDDIR)/bench
 	gnuplot < plot_cmds
 	@echo "[33m---------------------------------------------[0m"
 
-$(BLDDIR)/bench: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
-	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/bench
+$(BLDDIR)/bench: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/bench
 	
-$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
-	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/main
+$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
+	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/main
 
 $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec

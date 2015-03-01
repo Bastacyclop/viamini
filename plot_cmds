@@ -1,5 +1,12 @@
-set logscale y 2
 set terminal png size 500, 500 enhanced font "Fira Mono,8"
 set output "bench_plot.png"
 plot "bench_data" using 1:2 with impulses title 'Naive',\
-     "bench_data" using 1:3 with impulses title 'Sweep'
+     "bench_data" using 1:3 with impulses title 'Sweep',\
+     "bench_data" using 1:4 with impulses title 'AVL Sweep'
+
+set logscale y 2
+set terminal png size 500, 500 enhanced font "Fira Mono,8"
+set output "bench_plot_log.png"
+plot "bench_data" using 1:2 with impulses title 'Naive',\
+     "bench_data" using 1:3 with impulses title 'Sweep',\
+     "bench_data" using 1:4 with impulses title 'AVL Sweep'
