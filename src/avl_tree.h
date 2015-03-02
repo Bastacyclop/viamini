@@ -5,7 +5,7 @@
 
 typedef struct AVLNode AVLNode;
 struct AVLNode {
-    int balance;
+    size_t height;
     AVLNode* left;
     AVLNode* right;
     void* elem;
@@ -22,6 +22,10 @@ typedef struct {
 /// No allocation is done at this call.
 AVLTree AVLTree_new(size_t elem_size, const void* (*key_from_elem)(const void*),
                     int8_t (*compare)(const void*, const void*));
+
+
+/// Returns the height of the tree (0 is the empty tree).
+size_t AVLTree_height(const AVLTree* avl);
 
 /// Is the tree empty ?
 bool AVLTree_is_empty(const AVLTree* avl);

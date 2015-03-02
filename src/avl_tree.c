@@ -1,6 +1,3 @@
-#include <math.h>
-
-#include "vec.h"
 #include "avl_tree.h"
 
 typedef enum {
@@ -13,14 +10,19 @@ typedef enum {
 
 AVLNode* new_node(void* e, size_t elem_size);
 
-void rotate_left(AVLNode** root);
-void rotate_right(AVLNode** root);
-void rebalance_node(AVLNode** n);
-void rebalance_loaded_path(Vec* path);
-void rebalance_unloaded_path(Vec* path);
+static
+size_t height(AVLNode* n);
+void update_height(AVLNode* n);
+Balance balance(AVLNode* n);
 
-AVLNode** find_entry(AVLTree* avl, AVLNode** np, const void* k, Vec* path);
-AVLNode** find_largest_entry(AVLNode** np);
+AVLNode* rotate_left(AVLNode* n);
+AVLNode* rotate_right(AVLNode* n);
+AVLNode* rebalance_if_overleft(AVLNode* n);
+AVLNode* rebalance_if_overright(AVLNode* n);
+
+AVLNode* avl_insert(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done);
+AVLNode* avl_remove(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done);
+AVLNode* remove_max(AVLTree* avl, AVLNode* n, void* e);
 
 void may_drop_node(AVLNode* n, void (*drop_elem)(void*));
 void may_plain_drop_node(AVLNode* n);
@@ -35,161 +37,199 @@ AVLTree AVLTree_new(size_t elem_size, const void* (*key_from_elem)(const void*),
     };
 }
 
+size_t AVLTree_height(const AVLTree* avl) {
+    return height(avl->root);
+}
+
 bool AVLTree_is_empty(const AVLTree* avl) {
-    return !avl->root;
+    return AVLTree_height(avl) == 0;
 }
 
 AVLNode* new_node(void* e, size_t elem_size) {
     AVLNode* n = malloc(sizeof(AVLNode));
     assert_alloc(n);
-    void* elem = malloc(elem_size);
+    void* elem = malloc(elem_size); // we could avoid double allocation.
     assert_alloc(elem);
     memcpy(elem, e, elem_size);
 
-    *n = (AVLNode) { .balance = BALANCED, .left = NULL, .right = NULL, .elem = elem };
+    *n = (AVLNode) { .height = 1, .left = NULL, .right = NULL, .elem = elem };
     return n;
 }
 
-void rotate_left(AVLNode** root) {
-    AVLNode* r = *root;
-    AVLNode* t = r->right;
-
-    r->right = t->left;
-    t->left = r;
-
-    *root = t;
-
-    r->balance = r->balance - 1 + int_min(0, -t->balance);
-    t->balance = t->balance - 1 + int_min(r->balance, 0);
+size_t height(AVLNode* n) {
+    if (!n) return 0;
+    return n->height;
 }
 
-void rotate_right(AVLNode** root) {
-    AVLNode* r = *root;
-    AVLNode* t = r->left;
-
-    r->left = t->right;
-    t->right = r;
-
-    *root = t;
-
-    r->balance = r->balance + 1 + int_max(-t->balance, 0);
-    t->balance = t->balance + 1 + int_max(0, t->balance);
+void update_height(AVLNode* n) {
+    n->height = 1 + size_t_max(height(n->left), height(n->right));
 }
 
-void rebalance_node(AVLNode** n) {
-    if ((*n)->balance == OVERLEFT) {
-        AVLNode** l = &(*n)->left;
-        if ((*l)->balance == RIGHT) {
-            rotate_left(l);
+Balance balance(AVLNode* n) {
+    return (int64_t)(-height(n->left)) + (int64_t)(height(n->right));
+}
+
+// n has to have a right child.
+AVLNode* rotate_left(AVLNode* n) {
+    AVLNode* t = n->right;
+
+    n->right = t->left;
+    t->left = n;
+
+    update_height(n);
+    update_height(t);
+    return t;
+}
+
+// n has to have a left child.
+AVLNode* rotate_right(AVLNode* n) {
+    AVLNode* t = n->left;
+
+    n->left = t->right;
+    t->right = n;
+
+    update_height(n);
+    update_height(t);
+    return t;
+}
+
+AVLNode* rebalance_if_overleft(AVLNode* n) {
+    Balance bal = balance(n);
+    if (bal == OVERLEFT) {
+        Balance l_bal = balance(n->left);
+        if (l_bal == RIGHT) {
+            n->left = rotate_left(n->left);
         }
-        rotate_right(n);
-    } else if ((*n)->balance == OVERRIGHT) {
-        AVLNode** r = &(*n)->right;
-        if ((*r)->balance == LEFT) {
-            rotate_right(r);
-        }
-        rotate_left(n);
+        n = rotate_right(n);
     }
+    return n;
 }
 
-AVLNode** find_entry(AVLTree* avl, AVLNode** np, const void* k, Vec* path) {
-    AVLNode* n = *np;
-    if (!n) return np;
-
-    const void* nk = (*avl->key_of)(n->elem);
-    int8_t cmp = (*avl->cmp)(nk, k);
-    if (cmp == 0) return np;
-
-    Vec_push(path, &np);
-    if (cmp < 0) {
-        return find_entry(avl, &n->left, k, path);
-    } else {
-        return find_entry(avl, &n->right, k, path);
+AVLNode* rebalance_if_overright(AVLNode* n) {
+    Balance bal = balance(n);
+    if (bal == OVERRIGHT) {
+        Balance r_bal = balance(n->right);
+        if (r_bal == LEFT) {
+            n->right = rotate_right(n->right);
+        }
+        n = rotate_left(n);
     }
+    return n;
 }
 
 bool AVLTree_insert(AVLTree* avl, void* e) {
-    Vec path = Vec_new(sizeof(AVLNode**));
     const void* k = (*avl->key_of)(e);
-    AVLNode** entry = find_entry(avl, &avl->root, k, &path);
-
-    bool insert = !*entry;
-    if (insert) {
-        *entry = new_node(e, avl->elem_size);
-        rebalance_loaded_path(&path);
-    }
-
-    Vec_plain_drop(&path);
-    return insert;
+    bool done;
+    avl->root = avl_insert(avl, avl->root, k, e, &done);
+    return done;
 }
 
-void rebalance_loaded_path(Vec* path) {
-    if (Vec_len(path) < 2) return;
+AVLNode* avl_insert(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done) {
+    if (n) {
+        const void* nk = (*avl->key_of)(n->elem);
+        int8_t cmp = (*avl->cmp)(k, nk);
 
-    AVLNode** n;
-    Vec_pop(path, &n);
-    AVLNode** p;
-    while (Vec_pop(path, &p)) {
-        (*p)->balance += (*n == (*p)->left) ? (LEFT) : (RIGHT);
-        rebalance_node(p);
-
-        n = p;
+        if (cmp < 0) {
+            n->left = avl_insert(avl, n->left, k, e, done);
+            if (*done) {
+                update_height(n);
+                n = rebalance_if_overleft(n);
+            }
+        } else if (cmp > 0) {
+            n->right = avl_insert(avl, n->right, k, e, done);
+            if (*done) {
+                update_height(n);
+                n = rebalance_if_overright(n);
+            }
+        } else {
+            *done = false;
+        }
+    } else {
+        n = new_node(e, avl->elem_size);
+        *done = true;
     }
-}
 
-AVLNode** find_largest_entry(AVLNode** np) {
-    AVLNode* n = *np;
-    if (n->right) {
-        return find_largest_entry(&n->right);
-    }
-    return np;
+    return n;
 }
 
 bool AVLTree_remove(AVLTree* avl, const void* k, void* e) {
-    Vec path = Vec_new(sizeof(AVLNode**));
-    AVLNode** entry = find_entry(avl, &avl->root, k, &path);
-
-    bool remove = *entry;
-    if (remove) {
-        AVLNode** p = entry;
-        if (e) memcpy(e, (*entry)->elem, avl->elem_size);
-
-        if ((*entry)->left && (*entry)->right) {
-            AVLNode** x = find_largest_entry(&(*entry)->left);
-            memcpy((*entry)->elem, (*x)->elem, avl->elem_size);
-            p = x;
-        }
-
-        AVLNode* target = *p;
-        if (target->left) {
-            *p = target->left;
-        } else if (target->right) {
-            *p = target->right;
-        } else {
-            *p = NULL;
-        }
-        free(target->elem);
-        free(target);
-
-        rebalance_unloaded_path(&path);
-    }
-
-    Vec_plain_drop(&path);
-    return remove;
+    bool done;
+    avl->root = avl_remove(avl, avl->root, k, e, &done);
+    return done;
 }
 
-void rebalance_unloaded_path(Vec* path) {
-    if (Vec_len(path) < 2) return;
+AVLNode* avl_remove(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done) {
+    if (n) {
+        const void* nk = (*avl->key_of)(n->elem);
+        int8_t cmp = (*avl->cmp)(k, nk);
 
-    AVLNode** n;
-    Vec_pop(path, &n);
-    AVLNode** p;
-    while (Vec_pop(path, &p)) {
-        (*p)->balance -= (*n == (*p)->left) ? (LEFT) : (RIGHT);
-        rebalance_node(p);
+        if (cmp < 0) {
+            n->left = avl_remove(avl, n->left, k, e, done);
+            if (*done) {
+                update_height(n);
+                n = rebalance_if_overright(n);
+            }
+        } else if (cmp > 0) {
+            n->right = avl_remove(avl, n->right, k, e, done);
+            if (*done) {
+                update_height(n);
+                n = rebalance_if_overleft(n);
+            }
+        } else {
+            if (e) memcpy(e, n->elem, avl->elem_size);
 
-        n = p;
+            if (n->left && n->right) {
+                n->left = remove_max(avl, n->left, n->elem);
+            } else {
+                AVLNode* t = n;
+                if (t->left) {
+                    n = t->left;
+                } else {
+                    // if there is no right either then `n` will be `NULL`,
+                    // thats what we want.
+                    n = t->right;
+                }
+                free(t->elem);
+                free(t);
+            }
+
+            if (n) { // might be done better.
+                update_height(n);
+                n = rebalance_if_overleft(n);
+                n = rebalance_if_overright(n);
+            }
+            *done = true;
+        }
+    } else {
+        *done = false;
     }
+
+    return n;
+}
+
+AVLNode* remove_max(AVLTree* avl, AVLNode* n, void* e) {
+    if (n->right) {
+        n->right = remove_max(avl, n->right, e);
+        update_height(n);
+        n = rebalance_if_overleft(n);
+    } else {
+        memcpy(e, n->elem, avl->elem_size);
+
+        AVLNode* t = n;
+        // if there is no left then `n` will be `NULL`,
+        // thats what we want because we already know that there is no right.
+        n = t->left;
+        free(t->elem);
+        free(t);
+
+        if (n) { // might be done better.
+            update_height(n);
+            n = rebalance_if_overleft(n);
+            n = rebalance_if_overright(n);
+        }
+    }
+
+    return n;
 }
 
 void AVLTree_clear(AVLTree* avl, void (*drop_elem)(void*)) {
@@ -233,14 +273,13 @@ const AVLNode* AVLTree_find_sup_eq(const AVLTree* avl, const void* k) {
 }
 
 const AVLNode* find_sup_eq(const AVLTree* avl, const AVLNode* n, const void* k) {
-    if (!n) return n;
+    if (n) {
+        const void* nk = (*avl->key_of)(n->elem);
+        int8_t cmp = (*avl->cmp)(k, nk);
 
-    const void* nk = (*avl->key_of)((n)->elem);
-    int8_t cmp = (*avl->cmp)(nk, k);
-
-    if (cmp < 0) {
-        return find_sup_eq(avl, n->left, k);
-    } else {
-        return n;
+        if (cmp > 0) {
+            n = find_sup_eq(avl, n->right, k);
+        }
     }
+    return n;
 }
