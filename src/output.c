@@ -2,6 +2,7 @@
 
 #include "output.h"
 
+static
 void ColorSet_step(ColorSet* cs);
 
 typedef struct {
@@ -9,15 +10,24 @@ typedef struct {
     float scale;
 } Transform;
 
+static
 void ps_set_color(FILE* f, Color c);
+static
 void ps_draw_line(FILE* f, Point a, Point b, const Transform* t);
+static
 void ps_draw_point(FILE* f, Point p, const Transform* t);
+static
 Transform compute_ps_transform(const AABB* aabb);
 
+static
 void svg_begin_color(FILE* f, Color c);
+static
 void svg_end_color(FILE* f);
+static
 void svg_draw_line(FILE* f, Point a, Point b, const Transform* t);
+static
 void svg_draw_point(FILE* f, Point p, const Transform* t);
+static
 Transform compute_svg_transform(const AABB* aabb);
 
 ColorSet ColorSet_new(size_t size) {

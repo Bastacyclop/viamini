@@ -3,17 +3,26 @@
 typedef uint32_t Block;
 
 #define BITS_PER_BLOCK (sizeof(Block)*8)
-static const size_t bits_per_block = BITS_PER_BLOCK;
-static const size_t max_block_index = BITS_PER_BLOCK - 1;
+static
+const size_t bits_per_block = BITS_PER_BLOCK;
+static
+const size_t max_block_index = BITS_PER_BLOCK - 1;
 #undef BITS_PER_BLOCK
 
+static
 size_t blocks_for_bits(size_t bits);
+static
 size_t block_of(size_t value);
+static
 size_t block_bit_of(size_t value);
+static
 bool block_get(Block b, size_t i);
+static
 void block_set(Block* b, size_t i);
+static
 void block_clear(Block* b, size_t i);
 
+static
 void BitSet_grow_to(BitSet* set, size_t len);
 
 BitSet BitSet_new() {

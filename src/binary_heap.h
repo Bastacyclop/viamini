@@ -3,14 +3,14 @@
 
 #include "vec.h"
 
+// TODO: with_capacity, reserve, reserve_exact, shrink_to_fit, ...
+//       replace, push_pop, peek
+
 /// A dynamically allocated binary heap.
 typedef struct {
     Vec vec;
     bool (*strict_order)(const void*, const void*);
 } BinaryHeap;
-
-// TODO: with_capacity, reserve, reserve_exact, shrink_to_fit, ...
-//       replace, push_pop, peek
 
 /// Creates an empty heap that will contain elements of size `elem_size`
 /// and be sorted with `predicate`.

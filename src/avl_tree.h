@@ -11,6 +11,8 @@ struct AVLNode {
     void* elem;
 };
 
+size_t AVLNode_height(const AVLNode* n);
+
 typedef struct {
     AVLNode* root;
     const size_t elem_size;

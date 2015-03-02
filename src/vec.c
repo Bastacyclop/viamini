@@ -1,7 +1,9 @@
 #include "vec.h"
 
+static
 void assert_bound(const Vec* v, size_t i);
 
+static
 void drop_elems(Vec* v, void (*drop_elem)(void*));
 
 Vec Vec_new(size_t elem_size) {

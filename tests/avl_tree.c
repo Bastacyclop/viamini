@@ -2,17 +2,11 @@
 
 #include "../src/avl_tree.h"
 
-size_t height(AVLNode* n);
 void check_node(const AVLNode* n);
 void print_node(const AVLNode* n);
 
 const int32_t* key_from_elem(const int32_t* n);
 int8_t cmp(const int32_t* a, const int32_t* b);
-
-size_t height(AVLNode* n) {
-    if (n) return n->height;
-    return 0;
-}
 
 void check_node(const AVLNode* n) {
     if (n) {
@@ -24,8 +18,8 @@ void check_node(const AVLNode* n) {
         if (n->right) {
             assert(*(int32_t*)n->right->elem > *(int32_t*)n->elem);
         }
-        assert(n->height == 1 + size_t_max(height(n->left), height(n->right)));
-        int64_t bal = (int64_t)height(n->right) - (int64_t)height(n->left);
+        assert(n->height == 1 + size_t_max(AVLNode_height(n->left), AVLNode_height(n->right)));
+        int64_t bal = (int64_t)AVLNode_height(n->right) - (int64_t)AVLNode_height(n->left);
         assert(-2 < bal && bal < 2);
     }
 }
@@ -76,18 +70,19 @@ int main() {
 
     for (size_t i = 0; i < N; i++) {
         assert(AVLTree_insert(&avl, &r[i]));
+        assert(!AVLTree_insert(&avl, &r[i]));
         check_node(avl.root);
     }
 
     for (size_t i = N - 1; i < SIZE_MAX; i--) {
         int32_t e;
         assert(AVLTree_remove(&avl, &r[i], &e));
+        assert(!AVLTree_remove(&avl, &r[i], &e));
         assert(e == r[i]);
         check_node(avl.root);
     }
 
     assert(AVLTree_is_empty(&avl));
-
     AVLTree_plain_clear(&avl);
 
     return EXIT_SUCCESS;

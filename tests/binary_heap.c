@@ -1,26 +1,48 @@
+#include <time.h>
+
 #include "../src/binary_heap.h"
 
-bool is_inf(const int32_t* a, const int32_t* b);
+bool is_inf(const size_t* a, const size_t* b);
 
-bool is_inf(const int32_t* a, const int32_t* b) {
+bool is_inf(const size_t* a, const size_t* b) {
     return *a < *b;
 }
 
 int main() {
-    BinaryHeap bh = BinaryHeap_new(sizeof(int32_t),
-                                  (bool (*)(const void*, const void*))is_inf);
+    srand(time(NULL));
 
-    int32_t t[] = { 1, 0, 4, 2, 3, 5 };
-    for (size_t i = 0; i <= 5; i++) {
-        BinaryHeap_push(&bh, t + i);
+    #define N 10
+    size_t t[N];
+
+    for (size_t i = 0; i < N; i++) {
+        t[i] = i;
     }
 
-    for (int32_t i = 0; i <= 5; i++) {
-        int32_t p;
+    size_t r[N];
+
+    for (size_t i = 0; i < N; i++) {
+        size_t ri = rand() % (N - i);
+        r[i] = t[ri];
+        t[ri] = t[N - 1 - i];
+    }
+
+    BinaryHeap bh = BinaryHeap_new(sizeof(size_t),
+                                  (bool (*)(const void*, const void*))is_inf);
+    assert(BinaryHeap_is_empty(&bh));
+
+    for (size_t i = 0; i < N; i++) {
+        BinaryHeap_push(&bh, &r[i]);
+        assert(BinaryHeap_len(&bh) == i + 1);
+    }
+
+    for (size_t i = 0; i < N; i++) {
+        size_t p = N;
         assert(BinaryHeap_pop(&bh, &p));
         assert(p == i);
+        assert(BinaryHeap_len(&bh) == N - i - 1);
     }
 
+    assert(BinaryHeap_is_empty(&bh));
     BinaryHeap_plain_drop(&bh);
 
     return EXIT_SUCCESS;

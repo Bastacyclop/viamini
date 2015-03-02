@@ -3,6 +3,9 @@
 
 #include "util.h"
 
+// TODO: shrink_to_fit, reserve_exact, truncate, insert, remove, append, sort, ..
+//       check overflows ?
+
 /// A dynamically sized array.
 typedef struct {
     void* data;
@@ -10,9 +13,6 @@ typedef struct {
     size_t len;
     size_t cap;
 } Vec;
-
-// TODO: shrink_to_fit, reserve_exact, truncate, insert, remove, append, sort, ..
-//       check overflows ?
 
 /// Creates an empty vector that will contain elements of size `elem_size`.
 /// No allocation is done at this call.

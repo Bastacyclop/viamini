@@ -8,24 +8,39 @@ typedef enum {
     OVERRIGHT   =  2
 } Balance;
 
+static
 AVLNode* new_node(void* e, size_t elem_size);
 
 static
-size_t height(AVLNode* n);
+size_t height(const AVLNode* n);
+static
 void update_height(AVLNode* n);
-Balance balance(AVLNode* n);
+static
+Balance balance(const AVLNode* n);
 
+static
 AVLNode* rotate_left(AVLNode* n);
+static
 AVLNode* rotate_right(AVLNode* n);
+static
 AVLNode* rebalance_if_overleft(AVLNode* n);
+static
 AVLNode* rebalance_if_overright(AVLNode* n);
 
+static
 AVLNode* avl_insert(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done);
+static
 AVLNode* avl_remove(AVLTree* avl, AVLNode* n, const void* k, void* e, bool* done);
+static
 AVLNode* remove_max(AVLTree* avl, AVLNode* n, void* e);
 
+static
 void may_drop_node(AVLNode* n, void (*drop_elem)(void*));
+static
 void may_plain_drop_node(AVLNode* n);
+
+static
+const AVLNode* find_sup_eq(const AVLTree* avl, const AVLNode* n, const void* k);
 
 AVLTree AVLTree_new(size_t elem_size, const void* (*key_from_elem)(const void*),
                     int8_t (*compare)(const void*, const void*)) {
@@ -56,16 +71,20 @@ AVLNode* new_node(void* e, size_t elem_size) {
     return n;
 }
 
-size_t height(AVLNode* n) {
+size_t height(const AVLNode* n) {
     if (!n) return 0;
     return n->height;
+}
+
+size_t AVLNode_height(const AVLNode* n) {
+    return height(n);
 }
 
 void update_height(AVLNode* n) {
     n->height = 1 + size_t_max(height(n->left), height(n->right));
 }
 
-Balance balance(AVLNode* n) {
+Balance balance(const AVLNode* n) {
     return (int64_t)(-height(n->left)) + (int64_t)(height(n->right));
 }
 
@@ -265,8 +284,6 @@ void may_plain_drop_node(AVLNode* n) {
     }
 }
 
-
-const AVLNode* find_sup_eq(const AVLTree* avl, const AVLNode* n, const void* k);
 
 const AVLNode* AVLTree_find_sup_eq(const AVLTree* avl, const void* k) {
     return find_sup_eq(avl, avl->root, k);

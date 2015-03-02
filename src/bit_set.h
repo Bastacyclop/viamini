@@ -3,13 +3,13 @@
 
 #include "vec.h"
 
+// TODO is_disjoint, is_subset, is_superset, ...
+//      shrink_to_fit, reserve, check overflows, ...
+
 typedef struct {
     Vec storage;
     size_t nbits;
 } BitSet;
-
-// TODO is_disjoint, is_subset, is_superset, ...
-//      shrink_to_fit, reserve, check overflows, ...
 
 BitSet BitSet_new(void);
 BitSet BitSet_with_capacity(size_t nbits);

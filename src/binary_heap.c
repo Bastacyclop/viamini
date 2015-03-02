@@ -1,16 +1,25 @@
 #include "binary_heap.h"
 
+static
 size_t root_index(void);
+static
 size_t left_child_index(size_t parent);
+static
 size_t right_child_index(size_t parent);
+static
 size_t parent_index(size_t child);
 
+static
 void swap(BinaryHeap* bh, void* a, void* b);
+static
 void swap_root_pop(BinaryHeap* bh, void* e);
 
+static
 void may_bubble_up(BinaryHeap* bh, size_t i);
+static
 void may_bubble_down(BinaryHeap* bh, size_t i);
 
+static
 size_t heap_get_mut_lower_child(BinaryHeap* bh, size_t i, void** e);
 
 BinaryHeap BinaryHeap_new(size_t elem_size, bool (*strict_order)(const void*, const void*)) {
