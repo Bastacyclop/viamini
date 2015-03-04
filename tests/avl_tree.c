@@ -2,26 +2,40 @@
 
 #include "../src/avl_tree.h"
 
-void check_node(const AVLNode* n);
+typedef struct {
+    int32_t min;
+    int32_t max;
+} Meta;
+
+Meta check_node(const AVLNode* n);
 void print_node(const AVLNode* n);
 
-const int32_t* key_from_elem(const int32_t* n);
 int8_t cmp(const int32_t* a, const int32_t* b);
 
-void check_node(const AVLNode* n) {
-    if (n) {
-        check_node(n->left);
-        check_node(n->right);
-        if (n->left) {
-            assert(*(int32_t*)n->left->elem < *(int32_t*)n->elem);
-        }
-        if (n->right) {
-            assert(*(int32_t*)n->right->elem > *(int32_t*)n->elem);
-        }
-        assert(n->height == 1 + size_t_max(AVLNode_height(n->left), AVLNode_height(n->right)));
-        int64_t bal = (int64_t)AVLNode_height(n->right) - (int64_t)AVLNode_height(n->left);
-        assert(-2 < bal && bal < 2);
+Meta check_node(const AVLNode* n) {
+    Meta m;
+    if (!n) return m;
+    int32_t e = *(int32_t*)n->elem;
+
+    if (n->left) {
+        Meta l = check_node(n->left);
+        assert(l.max < e);
+        m.min = l.min;
+    } else {
+        m.min = e;
     }
+    if (n->right) {
+        Meta r = check_node(n->right);
+        assert(r.min > e);
+        m.max = r.max;
+    } else {
+        m.max = e;
+    }
+    assert(n->height == 1 + size_t_max(AVLNode_height(n->left), AVLNode_height(n->right)));
+    int64_t bal = (int64_t)AVLNode_height(n->right) - (int64_t)AVLNode_height(n->left);
+    assert(-2 < bal && bal < 2);
+
+    return m;
 }
 
 void print_node(const AVLNode* n) {
@@ -32,10 +46,6 @@ void print_node(const AVLNode* n) {
     } else {
         puts("");
     }
-}
-
-const int32_t* key_from_elem(const int32_t* n) {
-    return n;
 }
 
 int8_t cmp(const int32_t* a, const int32_t* b) {
@@ -64,7 +74,6 @@ int main() {
     }
 
     AVLTree avl = AVLTree_new(sizeof(int32_t),
-                              (const void* (*)(const void*))key_from_elem,
                               (int8_t (*)(const void*, const void*))cmp);
     assert(AVLTree_is_empty(&avl));
 

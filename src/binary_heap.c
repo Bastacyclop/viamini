@@ -83,6 +83,15 @@ void may_bubble_up(BinaryHeap* bh, size_t i) {
     }
 }
 
+void swap(BinaryHeap* bh, void* a, void* b) {
+    size_t len = Vec_len(&bh->vec);
+    if (len < Vec_capacity(&bh->vec)) {
+        mem_swap_with(a, b, Vec_unsafe_get_mut(&bh->vec, len), bh->vec.elem_size);
+    } else {
+        mem_swap(a, b, bh->vec.elem_size);
+    }
+}
+
 bool BinaryHeap_pop(BinaryHeap* bh, void* e) {
     size_t len = Vec_len(&bh->vec);
     if (len < 2) return Vec_pop(&bh->vec, e);
@@ -90,6 +99,14 @@ bool BinaryHeap_pop(BinaryHeap* bh, void* e) {
     swap_root_pop(bh, e);
     may_bubble_down(bh, root_index());
     return true;
+}
+
+void swap_root_pop(BinaryHeap* bh, void* e) {
+    void* root = Vec_unsafe_get_mut(&bh->vec, root_index());
+    if (e) {
+        memcpy(e, root, bh->vec.elem_size);
+    }
+    Vec_pop(&bh->vec, root);
 }
 
 void may_bubble_down(BinaryHeap* bh, size_t i) {
@@ -133,21 +150,4 @@ void BinaryHeap_clear(BinaryHeap* bh, void (*drop_elem)(void*)) {
 
 void BinaryHeap_plain_clear(BinaryHeap* bh) {
     Vec_plain_clear(&bh->vec);
-}
-
-void swap(BinaryHeap* bh, void* a, void* b) {
-    size_t len = Vec_len(&bh->vec);
-    if (len < Vec_capacity(&bh->vec)) {
-        mem_swap_with(a, b, Vec_unsafe_get_mut(&bh->vec, len), bh->vec.elem_size);
-    } else {
-        mem_swap(a, b, bh->vec.elem_size);
-    }
-}
-
-void swap_root_pop(BinaryHeap* bh, void* e) {
-    void* root = Vec_unsafe_get_mut(&bh->vec, root_index());
-    if (e) {
-        memcpy(e, root, bh->vec.elem_size);
-    }
-    Vec_pop(&bh->vec, root);
 }

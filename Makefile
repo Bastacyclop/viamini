@@ -48,6 +48,9 @@ bench: $(BLDDIR)/bench
 	gnuplot < plot_cmds
 	@echo "[33m---------------------------------------------[0m"
 
+$(BLDDIR)/easy: $(SRCDIR)/easy.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/easy.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/easy
+
 $(BLDDIR)/bench: $(SRCDIR)/main.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(BLDDIR)/output.o $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/bench
 	

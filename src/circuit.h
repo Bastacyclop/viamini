@@ -40,12 +40,15 @@ void Circuit_drop(Circuit* c);
 /// Prints the file representation of the circuit on the terminal.
 void Circuit_print(const Circuit* c);
 
+typedef struct {
+    size_t net;
+    size_t seg;
+} SegmentLoc;
+
 typedef Vec IntersectionVec;
 typedef struct {
-    size_t a_net;
-    size_t a_seg;
-    size_t b_net;
-    size_t b_seg;
+    SegmentLoc a;
+    SegmentLoc b;
     Point sect;
 } Intersection;
 
