@@ -14,6 +14,7 @@ struct AVLNode {
 /// Returns the height of a node (0 if `n` is `NULL`).
 size_t AVLNode_height(const AVLNode* n);
 
+/// An AVL tree using linked nodes.
 typedef struct {
     AVLNode* root;
     const size_t elem_size;

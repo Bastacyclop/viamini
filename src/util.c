@@ -10,11 +10,12 @@ char* change_extension(const char* path, const char* ext) {
     assert(sep);
     size_t name_len = sep - path;
     size_t ext_len = strlen(ext);
+
     // +1 for `.` and +1 for `\0`
-    char* res = malloc((name_len+1+ext_len+1)*sizeof(char));
+    char* res = malloc((name_len + 1 + ext_len + 1)*sizeof(char));
     memcpy(res, path, name_len);
     res[name_len] = '.';
-    memcpy(res+name_len+1, ext, ext_len+1);
+    memcpy(res + name_len + 1, ext, ext_len + 1);
     return res;
 }
 
@@ -35,9 +36,9 @@ void ask_str(const char* msg, char* s, size_t max_len) {
 char* str_clone(const char* s) {
     size_t len = strlen(s);
     // +1 pour '\0'
-    char* clone = malloc((len+1)*sizeof(char));
+    char* clone = malloc((len + 1)*sizeof(char));
     assert_alloc(clone);
-    memcpy(clone, s, (len+1));
+    memcpy(clone, s, (len + 1));
     return clone;
 }
 

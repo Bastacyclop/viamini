@@ -13,7 +13,7 @@ typedef struct {
 } BinaryHeap;
 
 /// Creates an empty heap that will contain elements of size `elem_size`
-/// and be sorted with `predicate`.
+/// and be sorted with `strict_order`.
 /// No allocation is done at this call.
 BinaryHeap BinaryHeap_new(size_t elem_size, bool (*strict_order)(const void*, const void*));
 

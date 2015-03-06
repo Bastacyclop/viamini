@@ -7,16 +7,23 @@ typedef struct {
     int32_t max;
 } Meta;
 
+void check(const AVLTree* t);
 Meta check_node(const AVLNode* n);
 void print_node(const AVLNode* n);
 
 int8_t cmp(const int32_t* a, const int32_t* b);
 
+void check(const AVLTree* t) {
+    if (!AVLTree_is_empty(t)) {
+        check_node(t->root);
+    }
+}
+
 Meta check_node(const AVLNode* n) {
-    Meta m;
-    if (!n) return m;
+    if (!n) exit(1);
     int32_t e = *(int32_t*)n->elem;
 
+    Meta m;
     if (n->left) {
         Meta l = check_node(n->left);
         assert(l.max < e);
@@ -31,8 +38,11 @@ Meta check_node(const AVLNode* n) {
     } else {
         m.max = e;
     }
-    assert(n->height == 1 + size_t_max(AVLNode_height(n->left), AVLNode_height(n->right)));
-    int64_t bal = (int64_t)AVLNode_height(n->right) - (int64_t)AVLNode_height(n->left);
+
+    size_t h_l = AVLNode_height(n->left);
+    size_t h_r = AVLNode_height(n->right);
+    assert(n->height == 1 + size_t_max(h_l, h_r));
+    int64_t bal = (int64_t)(h_r) - (int64_t)(h_l);
     assert(-2 < bal && bal < 2);
 
     return m;
@@ -49,11 +59,14 @@ void print_node(const AVLNode* n) {
 }
 
 int8_t cmp(const int32_t* a, const int32_t* b) {
-    if (*a < *b) return -1;
-    if (*a > *b) return 1;
-    return 0;
+    int8_t cmp = 0;
+    if (*a < *b) {
+        cmp = -1;
+    } else if (*a > *b) {
+        cmp =  1;
+    }
+    return cmp;
 }
-
 
 int main() {
     srand(time(NULL));
@@ -80,7 +93,7 @@ int main() {
     for (size_t i = 0; i < N; i++) {
         assert(AVLTree_insert(&avl, &r[i]));
         assert(!AVLTree_insert(&avl, &r[i]));
-        check_node(avl.root);
+        check(&avl);
     }
 
     for (size_t i = N - 1; i < SIZE_MAX; i--) {
@@ -88,7 +101,7 @@ int main() {
         assert(AVLTree_remove(&avl, &r[i], &e));
         assert(!AVLTree_remove(&avl, &r[i], &e));
         assert(e == r[i]);
-        check_node(avl.root);
+        check(&avl);
     }
 
     assert(AVLTree_is_empty(&avl));

@@ -88,12 +88,12 @@ void Vec_reserve(Vec* v, size_t needed) {
 }
 
 void Vec_reserve_len(Vec* v, size_t len) {
-    if (len <= v->cap) return;
-
-    size_t new_cap = next_power_of_two(len);
-    v->data = realloc(v->data, v->elem_size*new_cap);
-    assert_alloc(v->data);
-    v->cap = new_cap;
+    if (len > v->cap) {
+        size_t new_cap = next_power_of_two(len);
+        v->data = realloc(v->data, v->elem_size*new_cap);
+        assert_alloc(v->data);
+        v->cap = new_cap;
+    }
 }
 
 void Vec_push(Vec* v, void* e) {

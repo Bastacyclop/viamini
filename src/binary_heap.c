@@ -72,14 +72,15 @@ void BinaryHeap_push(BinaryHeap* bh, void* elem) {
 }
 
 void may_bubble_up(BinaryHeap* bh, size_t i) {
-    if (i == root_index()) return;
-    size_t p = parent_index(i);
-    void* parent = Vec_unsafe_get_mut(&bh->vec, p);
-    void* elem = Vec_unsafe_get_mut(&bh->vec, i);
+    if (i != root_index()) {
+        size_t p = parent_index(i);
+        void* parent = Vec_unsafe_get_mut(&bh->vec, p);
+        void* elem = Vec_unsafe_get_mut(&bh->vec, i);
 
-    if ((*bh->strict_order)(elem, parent)) {
-        swap(bh, elem, parent);
-        may_bubble_up(bh, p);
+        if ((*bh->strict_order)(elem, parent)) {
+            swap(bh, elem, parent);
+            may_bubble_up(bh, p);
+        }
     }
 }
 
@@ -112,12 +113,13 @@ void swap_root_pop(BinaryHeap* bh, void* e) {
 void may_bubble_down(BinaryHeap* bh, size_t i) {
     void* target = NULL;
     size_t index = heap_get_mut_lower_child(bh, i, &target);
-    if (!target) return;
 
-    void* elem = Vec_unsafe_get_mut(&bh->vec, i);
-    if ((*bh->strict_order)(target, elem)) {
-        swap(bh, elem, target);
-        may_bubble_down(bh, index);
+    if (target) {
+        void* elem = Vec_unsafe_get_mut(&bh->vec, i);
+        if ((*bh->strict_order)(target, elem)) {
+            swap(bh, elem, target);
+            may_bubble_down(bh, index);
+        }
     }
 }
 
@@ -133,8 +135,8 @@ size_t heap_get_mut_lower_child(BinaryHeap* bh, size_t i, void** e) {
         *e = left_child;
         return lc;
     }
-    void* right_child = Vec_unsafe_get_mut(&bh->vec, rc);
 
+    void* right_child = Vec_unsafe_get_mut(&bh->vec, rc);
     if ((*bh->strict_order)(left_child, right_child)) {
         *e = left_child;
         return lc;

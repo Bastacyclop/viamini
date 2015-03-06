@@ -27,7 +27,7 @@ typedef struct {
 static
 bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect);
 static
-bool hv_intersects(SegmentRef h, SegmentRef v);
+bool hv_intersects(SegmentRef h, SegmentRef v, Point* sect);
 
 typedef enum {
     H_SEGMENT_BEGIN,
@@ -72,13 +72,10 @@ static
 void avl_sweep_check_intersections(IntersectionVec* intersections,
                                    const AVLTree* segments, const BreakpointData* d);
 static
-const AVLNode* avl_sweep_check_init(const AVLNode* n, int32_t y_min);
+const AVLNode* avl_find_sup_eq(const AVLNode* n, const BreakpointData* vd);
 static
 void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
-                          const BreakpointData* vd, int32_t y_min, int32_t y_max);
-static
-void avl_sweep_may_intersect(IntersectionVec* intersections,
-                             const BreakpointData* vd, const BreakpointData* hd);
+                          const BreakpointData* vd);
 
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
@@ -183,6 +180,7 @@ void check_net_segments(Net* net) {
 }
 
 AABB compute_aabb(Vec* nets) {
+    // Will crash if there is no point in the first net, seems legit.
     Point first = *(const Point*)Vec_get(&((const Net*)Vec_get(nets, 0))->points, 0);
     AABB aabb = (AABB) { .inf = first, .sup = first };
 
@@ -250,34 +248,26 @@ bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect) {
         if (b.beg->x == b.end->x) { // | & |
             return false;
        } else { // | & -
-            if (hv_intersects(b, a)) {
-                sect->x = a.beg->x;
-                sect->y = b.beg->y;
-                return true;
-            } else {
-                return false;
-            }
+            return hv_intersects(b, a, sect);
        }
     } else { // -
         if (b.beg->y == b.end->y) { // - & -
             return false;
         } else { // - & |
-            if (hv_intersects(a, b)) {
-                sect->x = b.beg->x;
-                sect->y = a.beg->y;
-                return true;
-            } else {
-                return false;
-            }
+            return hv_intersects(a, b, sect);
         }
     }
 }
 
-bool hv_intersects(SegmentRef h, SegmentRef v) {
-    assert(h.beg->x <= h.end->x);
-    assert(v.beg->y <= v.end->y);
-    return h.beg->x <= v.beg->x && v.beg->x <= h.end->x &&
-           v.beg->y <= h.beg->y && h.beg->y <= v.end->y;
+bool hv_intersects(SegmentRef h, SegmentRef v, Point* sect) {
+    if (h.beg->x <= v.beg->x && v.beg->x <= h.end->x &&
+        v.beg->y <= h.beg->y && h.beg->y <= v.end->y) {
+
+        sect->x = v.beg->x;
+        sect->y = h.beg->y;
+        return true;
+    }
+    return false;
 }
 
 IntersectionVec Circuit_intersections_naive(const Circuit* c) {
@@ -294,8 +284,6 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
                 .beg = Vec_get(&a_net->points, a->beg),
                 .end = Vec_get(&a_net->points, a->end)
             };
-
-            // We don't want to check intranet intersections.
 
             // Internet intersections
             for (size_t j = i + 1; j < net_count; j++) {
@@ -334,11 +322,15 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
     Breakpoint breakpoint;
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
         switch (breakpoint.type) {
-            case H_SEGMENT_BEGIN: sweep_comes_across(&segments, &breakpoint.data);
+            case H_SEGMENT_BEGIN:
+                sweep_comes_across(&segments, &breakpoint.data);
                 break;
-            case H_SEGMENT_END: sweep_goes_past(&segments, &breakpoint.data);
+            case H_SEGMENT_END:
+                sweep_goes_past(&segments, &breakpoint.data);
                 break;
-            case V_SEGMENT: sweep_check_intersections(&intersections, &segments, &breakpoint.data);
+            case V_SEGMENT:
+                sweep_check_intersections(&intersections, &segments,
+                                          &breakpoint.data);
                 break;
         }
     }
@@ -351,7 +343,7 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
 
 BinaryHeap sweep_init(const Circuit* c) {
     BinaryHeap breakpoints = BinaryHeap_new(sizeof(Breakpoint),
-                                            (bool (*)(const void*, const void*))sweep_order);
+        (bool (*)(const void*, const void*))sweep_order);
 
     size_t net_count = Vec_len(&c->nets);
     for (size_t n = 0; n < net_count; n++) {
@@ -370,12 +362,13 @@ BinaryHeap sweep_init(const Circuit* c) {
 }
 
 bool sweep_order(const Breakpoint* a, const Breakpoint* b) {
-    BreakpointType t_a = a->type;
-    BreakpointType t_b = b->type;
     int32_t x_a = Breakpoint_get_x(a);
     int32_t x_b = Breakpoint_get_x(b);
 
     if (x_a == x_b) {
+        BreakpointType t_a = a->type;
+        BreakpointType t_b = b->type;
+
         if (t_a == V_SEGMENT) {
             return t_b == H_SEGMENT_END;
         } else if (t_a == H_SEGMENT_BEGIN) {
@@ -420,7 +413,6 @@ void sweep_comes_across(Vec* segments, BreakpointData* d) {
 
 void sweep_goes_past(Vec* segments, const BreakpointData* d) {
     size_t seg_count = Vec_len(segments);
-
     for (size_t i = 0; i < seg_count; i++) {
         const BreakpointData* d_i = Vec_get(segments, i);
 
@@ -429,28 +421,23 @@ void sweep_goes_past(Vec* segments, const BreakpointData* d) {
             return;
         }
     }
-
-    assert(false);
 }
 
 void sweep_check_intersections(IntersectionVec* intersections,
-                               const Vec* segments, const BreakpointData* d) {
+                               const Vec* segments, const BreakpointData* vd) {
     size_t seg_count = Vec_len(segments);
-
     for (size_t i = 0; i < seg_count; i++) {
-        const BreakpointData* d_i = Vec_get(segments, i);
+        const BreakpointData* hd = Vec_get(segments, i);
+        int32_t hy = hd->ref.beg->y;
 
-        if (d->loc.net == d_i->loc.net) {
-            continue;
-        }
-
-        Point sect;
-        if (segment_intersects(d->ref, d_i->ref, &sect)) {
-            Intersection intersection = {
-                .a = d->loc, .b = d->loc,
-                .sect = sect
-            };
-            Vec_push(intersections, &intersection);
+        if (hd->loc.net != vd->loc.net) {
+            if (vd->ref.beg->y <= hy && hy <= vd->ref.end->y) {
+                Intersection intersection = {
+                    .a = vd->loc, .b = hd->loc,
+                    .sect = { vd->ref.beg->x, hy }
+                };
+                Vec_push(intersections, &intersection);
+            }
         }
     }
 }
@@ -464,11 +451,15 @@ IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c) {
     Breakpoint breakpoint;
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
         switch (breakpoint.type) {
-            case H_SEGMENT_BEGIN: avl_sweep_comes_across(&segments, &breakpoint.data);
+            case H_SEGMENT_BEGIN:
+                avl_sweep_comes_across(&segments, &breakpoint.data);
                 break;
-            case H_SEGMENT_END: avl_sweep_goes_past(&segments, &breakpoint.data);
+            case H_SEGMENT_END:
+                avl_sweep_goes_past(&segments, &breakpoint.data);
                 break;
-            case V_SEGMENT: avl_sweep_check_intersections(&intersections, &segments, &breakpoint.data);
+            case V_SEGMENT:
+                avl_sweep_check_intersections(&intersections, &segments,
+                                              &breakpoint.data);
                 break;
         }
     }
@@ -480,69 +471,82 @@ IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c) {
 }
 
 int8_t compare(const BreakpointData* a, const BreakpointData* b) {
+    int8_t cmp = 0;
     int32_t y_a = a->ref.beg->y;
     int32_t y_b = b->ref.beg->y;
-    if (y_a < y_b) return -1;
-    if (y_a > y_b) return 1;
-    SegmentLoc l_a = a->loc;
-    SegmentLoc l_b = b->loc;
-    if (l_a.net < l_b.net) return -1;
-    if (l_a.net > l_b.net) return 1;
-    if (l_a.seg < l_b.seg) return -1;
-    if (l_a.seg > l_b.seg) return 1;
-    return 0;
+
+    if (y_a < y_b) {
+        cmp = -1;
+    } else if (y_a > y_b) {
+        cmp =  1;
+    } else {
+        SegmentLoc l_a = a->loc;
+        SegmentLoc l_b = b->loc;
+
+        if (l_a.net < l_b.net) {
+            cmp = -1;
+        } else if (l_a.net > l_b.net) {
+            cmp =  1;
+        } else if (l_a.seg < l_b.seg) {
+            cmp = -1;
+        } else if (l_a.seg > l_b.seg) {
+            cmp =  1;
+        }
+    }
+
+    return cmp;
 }
 
 void avl_sweep_comes_across(AVLTree* segments, BreakpointData* d) {
-    assert(AVLTree_insert(segments, d));
+    AVLTree_insert(segments, d);
 }
 
 void avl_sweep_goes_past(AVLTree* segments, BreakpointData* d) {
-    assert(AVLTree_remove(segments, d, NULL));
+    AVLTree_remove(segments, d, NULL);
 }
 
 void avl_sweep_check_intersections(IntersectionVec* intersections,
                                    const AVLTree* segments, const BreakpointData* vd) {
-    int32_t y_min = vd->ref.beg->y;
-    int32_t y_max = vd->ref.end->y;
-
-    const AVLNode* n = avl_sweep_check_init(segments->root, y_min);
-    avl_sweep_check_iter(intersections, n, vd, y_min, y_max);
+    const AVLNode* n = avl_find_sup_eq(segments->root, vd);
+    // y >= y_min, but not y <= y_max.
+    avl_sweep_check_iter(intersections, n, vd);
 }
 
-const AVLNode* avl_sweep_check_init(const AVLNode* n, int32_t y_min) {
+const AVLNode* avl_find_sup_eq(const AVLNode* n, const BreakpointData* vd) {
     if (n) {
-        int32_t y = ((BreakpointData*)(n->elem))->ref.beg->y;
+        int32_t y_min = vd->ref.beg->y;
+        int32_t y = ((BreakpointData*)n->elem)->ref.beg->y;
 
         if (y < y_min) {
-            n = avl_sweep_check_init(n->right, y_min);
+            n = avl_find_sup_eq(n->right, vd);
         }
     }
     return n;
 }
 
 void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
-                          const BreakpointData* vd, int32_t y_min, int32_t y_max) {
+                          const BreakpointData* vd) {
     if (n) {
+        int32_t y_min = vd->ref.beg->y;
+        int32_t y_max = vd->ref.end->y;
         const BreakpointData* hd = n->elem;
         int32_t y = hd->ref.beg->y;
 
-        if (y_min <= y && y <= y_max) {
-            avl_sweep_may_intersect(intersections, vd, hd);
+        if (y < y_min) {
+            avl_sweep_check_iter(intersections, n->right, vd);
+        } else if (y > y_max) {
+            avl_sweep_check_iter(intersections, n->left, vd);
+        } else {
+            if (vd->loc.net != hd->loc.net) {
+                Intersection i = {
+                    .a = vd->loc, .b = hd->loc,
+                    .sect = { vd->ref.beg->x, hd->ref.beg->y }
+                };
+                Vec_push(intersections, &i);
+            }
 
-            avl_sweep_check_iter(intersections, n->left, vd, y_min, y_max);
-            avl_sweep_check_iter(intersections, n->right, vd, y_min, y_max);
+            avl_sweep_check_iter(intersections, n->right, vd);
+            avl_sweep_check_iter(intersections, n->left, vd);
         }
-    }
-}
-
-void avl_sweep_may_intersect(IntersectionVec* intersections,
-                             const BreakpointData* vd, const BreakpointData* hd) {
-    if (vd->loc.net != hd->loc.net) {
-        Intersection i = {
-            .a = vd->loc, .b = hd->loc,
-            .sect = { vd->ref.beg->x, hd->ref.beg->y }
-        };
-        Vec_push(intersections, &i);
     }
 }

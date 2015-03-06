@@ -2,9 +2,9 @@
 #include "output.h"
 
 int main() {
-    const char* path = "netlists/easy.net";
+    const char* path = "netlists/alea0030_030_10_088.net";
 
-    printf("handling `%s`.\n", path);
+    printf("handling `%s` ... ", path);
 
     char* display_path = change_extension(path, "svg");
     char* intersection_path = change_extension(path, "intersection.svg");
@@ -22,7 +22,7 @@ int main() {
     free(display_path);
     free(intersection_path);
 
-    printf("`%s` "TERM_GREEN("✓")"\n", path);
+    printf(TERM_GREEN("✓")"\n");
 
     return EXIT_SUCCESS;
 }
