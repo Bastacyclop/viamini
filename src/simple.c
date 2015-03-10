@@ -12,7 +12,7 @@ int main() {
     Circuit circuit = Circuit_from_file(path);
     Circuit_to_svg(&circuit, display_path);
 
-    Vec intersections = Circuit_intersections_avl_sweep(&circuit);
+    Vec intersections = Circuit_intersections_list_sweep(&circuit);
     Circuit_intersections_to_svg(&circuit, &intersections,
                                  display_path, intersection_path);
     Vec_plain_drop(&intersections);

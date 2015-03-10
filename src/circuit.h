@@ -56,10 +56,23 @@ typedef struct {
 IntersectionVec Circuit_intersections_naive(const Circuit* c);
 
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
-IntersectionVec Circuit_intersections_sweep(const Circuit* c);
+/// This version uses a vector to manage current horizontal segments.
+IntersectionVec Circuit_intersections_vec_sweep(const Circuit* c);
+
+/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
+/// This version uses an ordered list to manage current horizontal segments.
+IntersectionVec Circuit_intersections_list_sweep(const Circuit* c);
 
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses an AVL tree to manage current horizontal segments.
 IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c);
+
+/*
+typedef struct {
+    Point p;
+    GraphNode* adjacent;
+    GraphNode* collisions;
+} GraphNode;
+*/
 
 #endif // CIRCUIT_H

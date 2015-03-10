@@ -1,4 +1,5 @@
 #include "binary_heap.h"
+#include "list.h"
 #include "avl_tree.h"
 #include "circuit.h"
 
@@ -54,13 +55,22 @@ int32_t Breakpoint_get_x(const Breakpoint* b);
 static
 void sweep_memorize(BinaryHeap* bh, SegmentLoc sl,
                     const Net* net, const Segment* segment);
+
 static
-void sweep_comes_across(Vec* segments, BreakpointData* d);
+void vec_sweep_comes_across(Vec* segments, BreakpointData* d);
 static
-void sweep_goes_past(Vec* segments, const BreakpointData* d);
+void vec_sweep_goes_past(Vec* segments, const BreakpointData* d);
 static
-void sweep_check_intersections(IntersectionVec* intersections,
-                               const Vec* segments, const BreakpointData* d);
+void vec_sweep_check_intersections(IntersectionVec* intersections,
+                                   const Vec* segments, const BreakpointData* d);
+
+static
+void list_sweep_comes_across(List* segments, BreakpointData* d);
+static
+void list_sweep_goes_past(List* segments, const BreakpointData* d);
+static
+void list_sweep_check_intersections(IntersectionVec* intersections,
+                                    const List* segments, const BreakpointData* d);
 
 static
 int8_t compare(const BreakpointData* a, const BreakpointData* b);
@@ -243,6 +253,7 @@ void Circuit_print(const Circuit* c) {
     }
 }
 
+
 bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect) {
     if (a.beg->x == a.end->x) { // |
         if (b.beg->x == b.end->x) { // | & |
@@ -314,7 +325,8 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
     return intersections;
 }
 
-IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
+
+IntersectionVec Circuit_intersections_vec_sweep(const Circuit* c) {
     BinaryHeap breakpoints = sweep_init(c);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     Vec segments = Vec_new(sizeof(BreakpointData));
@@ -323,14 +335,14 @@ IntersectionVec Circuit_intersections_sweep(const Circuit* c) {
     while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
         switch (breakpoint.type) {
             case H_SEGMENT_BEGIN:
-                sweep_comes_across(&segments, &breakpoint.data);
+                vec_sweep_comes_across(&segments, &breakpoint.data);
                 break;
             case H_SEGMENT_END:
-                sweep_goes_past(&segments, &breakpoint.data);
+                vec_sweep_goes_past(&segments, &breakpoint.data);
                 break;
             case V_SEGMENT:
-                sweep_check_intersections(&intersections, &segments,
-                                          &breakpoint.data);
+                vec_sweep_check_intersections(&intersections, &segments,
+                                              &breakpoint.data);
                 break;
         }
     }
@@ -407,11 +419,11 @@ void sweep_memorize(BinaryHeap* bh, SegmentLoc sl,
     }
 }
 
-void sweep_comes_across(Vec* segments, BreakpointData* d) {
+void vec_sweep_comes_across(Vec* segments, BreakpointData* d) {
     Vec_push(segments, d);
 }
 
-void sweep_goes_past(Vec* segments, const BreakpointData* d) {
+void vec_sweep_goes_past(Vec* segments, const BreakpointData* d) {
     size_t seg_count = Vec_len(segments);
     for (size_t i = 0; i < seg_count; i++) {
         const BreakpointData* d_i = Vec_get(segments, i);
@@ -423,7 +435,7 @@ void sweep_goes_past(Vec* segments, const BreakpointData* d) {
     }
 }
 
-void sweep_check_intersections(IntersectionVec* intersections,
+void vec_sweep_check_intersections(IntersectionVec* intersections,
                                const Vec* segments, const BreakpointData* vd) {
     size_t seg_count = Vec_len(segments);
     for (size_t i = 0; i < seg_count; i++) {
@@ -439,6 +451,125 @@ void sweep_check_intersections(IntersectionVec* intersections,
                 Vec_push(intersections, &intersection);
             }
         }
+    }
+}
+
+
+IntersectionVec Circuit_intersections_list_sweep(const Circuit* c) {
+    BinaryHeap breakpoints = sweep_init(c);
+    IntersectionVec intersections = Vec_new(sizeof(Intersection));
+    List segments = List_new(sizeof(BreakpointData));
+
+    Breakpoint breakpoint;
+    while (BinaryHeap_pop(&breakpoints, &breakpoint)) {
+        switch (breakpoint.type) {
+            case H_SEGMENT_BEGIN:
+                list_sweep_comes_across(&segments, &breakpoint.data);
+                break;
+            case H_SEGMENT_END:
+                list_sweep_goes_past(&segments, &breakpoint.data);
+                break;
+            case V_SEGMENT:
+                list_sweep_check_intersections(&intersections, &segments,
+                                               &breakpoint.data);
+                break;
+        }
+    }
+
+    List_plain_clear(&segments);
+    BinaryHeap_plain_drop(&breakpoints);
+
+    return intersections;
+}
+
+void list_sweep_comes_across(List* segments, BreakpointData* d) {
+    int32_t y = d->ref.beg->y;
+
+    ListNode* n = List_front_node_mut(segments);
+    if (!n) {
+        List_push(segments, d);
+    } else {
+        const BreakpointData* nd = ListNode_elem(n);
+        int32_t ny = nd->ref.beg->y;
+
+        if (y <= ny) {
+            List_push(segments, d);
+        } else {
+            ListNode* p = n;
+            n = ListNode_next_mut(n);
+
+            while (n) {
+                nd = ListNode_elem(n);
+                ny = nd->ref.beg->y;
+                if (y <= ny) {
+                    break;
+                }
+
+                p = n;
+                n = ListNode_next_mut(n);
+            }
+
+            List_insert(segments, p, d);
+        }
+    }
+}
+
+void list_sweep_goes_past(List* segments, const BreakpointData* d) {
+    ListNode* n = List_front_node_mut(segments);
+    if (n) {
+        const BreakpointData* nd = ListNode_elem(n);
+
+        if (memcmp(&nd->loc, &d->loc, sizeof(SegmentLoc)) == 0) {
+            List_pop(segments, NULL);
+        } else {
+            ListNode* p = n;
+            n = ListNode_next_mut(n);
+
+            while (n) {
+                nd = ListNode_elem(n);
+                if (memcmp(&nd->loc, &d->loc, sizeof(SegmentLoc)) == 0) {
+                    List_remove(segments, p);
+                    return;
+                }
+
+                p = n;
+                n = ListNode_next_mut(n);
+            }
+        }
+    }
+}
+
+void list_sweep_check_intersections(IntersectionVec* intersections,
+                                    const List* segments, const BreakpointData* vd) {
+    int32_t y_min = vd->ref.beg->y;
+    int32_t y_max = vd->ref.end->y;
+
+    const ListNode* n = List_front_node(segments);
+
+    while (n) {
+        const BreakpointData* hd = ListNode_elem(n);
+        int32_t hy = hd->ref.beg->y;
+
+        if (hy >= y_min) break;
+
+        n = ListNode_next(n);
+    }
+
+    while (n) {
+        const BreakpointData* hd = ListNode_elem(n);
+        int32_t hy = hd->ref.beg->y;
+
+        if (hy > y_max) break;
+
+        if (hd->loc.net != vd->loc.net) {
+            Intersection intersection = {
+                .a = vd->loc, .b = hd->loc,
+                .sect = { vd->ref.beg->x, hy }
+            };
+            Vec_push(intersections, &intersection);
+        }
+
+        n = ListNode_next(n);
     }
 }
 

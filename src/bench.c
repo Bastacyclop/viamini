@@ -37,7 +37,7 @@ int main() {
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
-    fprintf(bench_data, "%zu 0 0 0\n", Vec_len(&paths)); // placeholder
+    fprintf(bench_data, "%zu 0 0 0 0\n", Vec_len(&paths)); // placeholder
 
     char* path;
     while (Vec_pop(&paths, &path)) {
@@ -51,27 +51,33 @@ int main() {
         uint32_t naive_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections);
 
-        measure_exec_time("   intersections sweep",
-            Vec intersections2 = Circuit_intersections_sweep(&circuit);
+        measure_exec_time("   intersections vec sweep",
+            Vec intersections2 = Circuit_intersections_vec_sweep(&circuit);
         )
-        uint32_t sweep_time = (uint32_t)delta_time;
+        uint32_t vec_sweep_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections2);
 
+        measure_exec_time("   intersections list sweep",
+            Vec intersections3 = Circuit_intersections_list_sweep(&circuit);
+        )
+        uint32_t list_sweep_time = (uint32_t)delta_time;
+        Vec_plain_drop(&intersections3);
+
         measure_exec_time("   intersections avl sweep",
-            Vec intersections3 = Circuit_intersections_avl_sweep(&circuit);
+            Vec intersections4 = Circuit_intersections_avl_sweep(&circuit);
         )
         uint32_t avl_sweep_time = (uint32_t)delta_time;
-        Vec_plain_drop(&intersections3);
+        Vec_plain_drop(&intersections4);
 
         Circuit_drop(&circuit);
 
-        fprintf(bench_data, "%zu %u %u %u\n", Vec_len(&paths),
-                naive_time, sweep_time, avl_sweep_time);
+        fprintf(bench_data, "%zu %u %u %u %u\n", Vec_len(&paths),
+                naive_time, vec_sweep_time, list_sweep_time, avl_sweep_time);
         puts(TERM_GREEN("   ✓"));
         free(path);
     }
 
-    fputs("0 0 0 0\n", bench_data); // placeholder
+    fputs("0 0 0 0 0\n", bench_data); // placeholder
     fclose(bench_data);
 
     Vec_plain_drop(&paths);
