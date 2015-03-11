@@ -87,6 +87,9 @@ static
 void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
                           const BreakpointData* vd);
 
+static
+GraphNode* new_graph_node(GraphNodeType t, void* d);
+
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
     exit(1);                                        \
@@ -602,30 +605,29 @@ IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c) {
 }
 
 int8_t compare(const BreakpointData* a, const BreakpointData* b) {
-    int8_t cmp = 0;
     int32_t y_a = a->ref.beg->y;
     int32_t y_b = b->ref.beg->y;
 
     if (y_a < y_b) {
-        cmp = -1;
+        return -1;
     } else if (y_a > y_b) {
-        cmp =  1;
+        return  1;
     } else {
         SegmentLoc l_a = a->loc;
         SegmentLoc l_b = b->loc;
 
         if (l_a.net < l_b.net) {
-            cmp = -1;
+            return -1;
         } else if (l_a.net > l_b.net) {
-            cmp =  1;
+            return  1;
         } else if (l_a.seg < l_b.seg) {
-            cmp = -1;
+            return -1;
         } else if (l_a.seg > l_b.seg) {
-            cmp =  1;
+            return  1;
+        } else {
+            return  0;
         }
     }
-
-    return cmp;
 }
 
 void avl_sweep_comes_across(AVLTree* segments, BreakpointData* d) {
@@ -680,4 +682,42 @@ void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
             avl_sweep_check_iter(intersections, n->left, vd);
         }
     }
+}
+
+GraphNode* new_graph_node(GraphNodeType t, void* d) {
+    GraphNode* n = malloc(sizeof(GraphNode));
+    assert_alloc(n);
+
+    *n = (GraphNode) {
+        .type = t, .data = d,
+        .continuity = Vec_new(sizeof(GraphNode)),
+        .conflict = Vec_new(sizeof(GraphNode))
+    };
+    return n;
+}
+
+Graph Graph_new(const Circuit* c, const IntersectionVec* inters) {
+    size_t net_count = Vec_len(&c->nets);
+    for (size_t n = 0; n < net_count; n++) {
+        const Net* net = Vec_get(&c->nets, n);
+
+        size_t point_count = Vec_len(&net->points);
+        for (size_t p = 0; p < point_count; p++) {
+
+        }
+
+        size_t seg_count = Vec_len(&net->points);
+        for (size_t s = 0; s < seg_count; s++) {
+
+        }
+    }
+
+    size_t inter_count = Vec_len(inters);
+    for (size_t i = 0; i < inter_count; i++) {
+
+    }
+
+    return (Graph) {
+        .n = new_graph_node(POINT_NODE, NULL)
+    };
 }

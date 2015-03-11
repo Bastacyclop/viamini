@@ -3,6 +3,8 @@
 
 #include "util.h"
 
+// A simply linked list.
+
 typedef struct ListNode ListNode;
 struct ListNode {
     void* elem;
@@ -36,9 +38,13 @@ void List_plain_clear(List* l);
 void* List_peek(List* l);
 
 /// Pushes an element in front of the list.
+/// The element is copied from `e`.
 void List_push(List* l, void* e);
 
-/// Removes and copies the first element of the list to `e`.
+/// Pops the first element of the list.
+/// Returns `true` if it was popped,
+///   and copies it to `e` if `e` is not `NULL`.
+/// Returns `false` otherwise.
 bool List_pop(List* l, void* e);
 
 
@@ -54,16 +60,17 @@ const ListNode* ListNode_next(const ListNode* n);
 /// Returns a pointer to the next node.
 ListNode* ListNode_next_mut(ListNode* n);
 
-/// Returns the element of the node.
+/// Returns a pointer to the element of the node.
 const void* ListNode_elem(const ListNode* n);
 
-/// Returns the element of the node.
+/// Returns a pointer to the element of the node.
 void* ListNode_elem_mut(ListNode* n);
 
 /// Removes the node after `n` from the list.
 void List_remove(List* l, ListNode* n);
 
 /// Inserts an element after `n` into the list.
+/// The element is copied from `e`.
 void List_insert(List* l, ListNode* n, void* e);
 
 #endif // LIST_H

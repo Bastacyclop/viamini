@@ -67,12 +67,24 @@ IntersectionVec Circuit_intersections_list_sweep(const Circuit* c);
 /// This version uses an AVL tree to manage current horizontal segments.
 IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c);
 
-/*
+typedef enum {
+    POINT_NODE,
+    SEGMENT_NODE
+} GraphNodeType;
+
+typedef struct GraphNode GraphNode;
+typedef Vec GraphNodeVec;
+struct GraphNode {
+    GraphNodeType type;
+    void* data;
+    GraphNodeVec continuity;
+    GraphNodeVec conflict;
+};
+
 typedef struct {
-    Point p;
-    GraphNode* adjacent;
-    GraphNode* collisions;
-} GraphNode;
-*/
+    GraphNode* n;
+} Graph;
+
+Graph Graph_new(const Circuit* c, const IntersectionVec* inters);
 
 #endif // CIRCUIT_H

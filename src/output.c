@@ -2,6 +2,10 @@
 
 #include "output.h"
 
+const Color RED   = { 255, 0, 0 };
+const Color GREEN = { 0, 255, 0 };
+const Color BLUE  = { 0, 0, 255 };
+
 static
 void ColorSet_step(ColorSet* cs);
 
@@ -17,6 +21,8 @@ void ps_draw_line(FILE* f, Point a, Point b, const Transform* t);
 static
 void ps_draw_point(FILE* f, Point p, const Transform* t);
 static
+void ps_draw_intersection(FILE* f, Point p, const Transform* t);
+static
 Transform compute_ps_transform(const AABB* aabb);
 
 static
@@ -27,6 +33,8 @@ static
 void svg_draw_line(FILE* f, Point a, Point b, const Transform* t);
 static
 void svg_draw_point(FILE* f, Point p, const Transform* t);
+static
+void svg_draw_intersection(FILE* f, Point p, const Transform* t);
 static
 Transform compute_svg_transform(const AABB* aabb);
 
@@ -97,8 +105,8 @@ void ps_set_color(FILE* f, Color c) {
     #undef to_ps
 }
 
-#define x_trans(X) t->scale*(float)(X+t->translate.x)
-#define y_trans(Y) t->scale*(float)(Y+t->translate.y)
+#define x_trans(X) (t->scale*(float)(X+t->translate.x))
+#define y_trans(Y) (t->scale*(float)(Y+t->translate.y))
 
 void ps_draw_line(FILE* f, Point a, Point b, const Transform* t) {
     fprintf(f, "%f %f moveto\n", x_trans(a.x), y_trans(a.y));
@@ -109,6 +117,18 @@ void ps_draw_line(FILE* f, Point a, Point b, const Transform* t) {
 void ps_draw_point(FILE* f, Point p, const Transform* t) {
     fprintf(f, "%f %f 1.5 0 360 arc\n", x_trans(p.x), y_trans(p.y));
     fputs("fill\n", f);
+}
+
+void ps_draw_intersection(FILE* f, Point p, const Transform* t) {
+    float x = x_trans(p.x);
+    float y = y_trans(p.y);
+    float r = 1.5;
+    fprintf(f, "%f %f moveto\n", x - r, y - r);
+    fprintf(f, "%f %f lineto\n", x + r, y + r);
+    fputs("stroke\n", f);
+    fprintf(f, "%f %f moveto\n", x - r, y + r);
+    fprintf(f, "%f %f lineto\n", x + r, y - r);
+    fputs("stroke\n", f);
 }
 
 #undef x_trans
@@ -142,11 +162,11 @@ void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
     fclose(base);
 
     Transform trans = compute_ps_transform(&c->aabb);
-    ps_set_color(f, (Color) { 0, 0, 0 });
+    ps_set_color(f, RED);
 
     for (size_t i = 0; i < Vec_len(intersections); i++) {
         const Intersection* intersection = Vec_get(intersections, i);
-        ps_draw_point(f, intersection->sect, &trans);
+        ps_draw_intersection(f, intersection->sect, &trans);
     }
 
     fclose(f);
@@ -199,8 +219,8 @@ void svg_end_color(FILE* f) {
     fputs("</g>\n", f);
 }
 
-#define x_trans(X) t->scale*(float)(X+t->translate.x)
-#define y_trans(Y) t->scale*(float)(Y+t->translate.y)
+#define x_trans(X) (t->scale*(float)(X+t->translate.x))
+#define y_trans(Y) (t->scale*(float)(Y+t->translate.y))
 
 void svg_draw_line(FILE* f, Point a, Point b, const Transform* t) {
     fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
@@ -210,6 +230,16 @@ void svg_draw_line(FILE* f, Point a, Point b, const Transform* t) {
 void svg_draw_point(FILE* f, Point p, const Transform* t) {
     fprintf(f, "<circle cx=\"%f\" cy=\"%f\" r=\"1.\" />\n",
             x_trans(p.x), y_trans(p.y));
+}
+
+void svg_draw_intersection(FILE* f, Point p, const Transform* t) {
+    float x = x_trans(p.x);
+    float y = y_trans(p.y);
+    float r = 1.5;
+    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
+                         x - r,   y - r,   x + r,   y + r);
+    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
+                         x - r,   y + r,   x + r,   y - r);
 }
 
 #undef x_trans
@@ -245,11 +275,11 @@ void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
     fclose(base);
 
     Transform trans = compute_svg_transform(&c->aabb);
-    svg_begin_color(f, (Color) { 0, 0, 0 });
+    svg_begin_color(f, RED);
 
     for (size_t i = 0; i < Vec_len(intersections); i++) {
         const Intersection* intersection = Vec_get(intersections, i);
-        svg_draw_point(f, intersection->sect, &trans);
+        svg_draw_intersection(f, intersection->sect, &trans);
     }
 
     svg_end_color(f);

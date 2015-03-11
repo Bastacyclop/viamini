@@ -138,7 +138,10 @@ bool AVLTree_insert(AVLTree* avl, void* e) {
 }
 
 AVLNode* avl_insert(AVLTree* avl, AVLNode* n, void* e, bool* done) {
-    if (n) {
+    if (!n) {
+        n = new_node(e, avl->elem_size);
+        *done = true;
+    } else {
         int8_t cmp = (*avl->cmp)(e, n->elem);
 
         if (cmp < 0) {
@@ -156,9 +159,6 @@ AVLNode* avl_insert(AVLTree* avl, AVLNode* n, void* e, bool* done) {
         } else {
             *done = false;
         }
-    } else {
-        n = new_node(e, avl->elem_size);
-        *done = true;
     }
 
     return n;

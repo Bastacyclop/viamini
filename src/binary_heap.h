@@ -3,10 +3,11 @@
 
 #include "vec.h"
 
+/// A dynamically allocated binary heap.
+
 // TODO: with_capacity, reserve, reserve_exact, shrink_to_fit, ...
 //       replace, push_pop, peek
 
-/// A dynamically allocated binary heap.
 typedef struct {
     Vec vec;
     bool (*strict_order)(const void*, const void*);
@@ -39,7 +40,7 @@ void BinaryHeap_plain_drop(BinaryHeap* bh);
 void BinaryHeap_push(BinaryHeap* bh, void* e);
 
 /// Pops the lower element of the heap (according to its ordering).
-/// Returns `true` if an element was popped.
+/// Returns `true` if an element was popped,
 ///   and copies the element to `e` if `e` is not `NULL`.
 /// Returns `false` otherwise.
 /// The heap might be reorganised.

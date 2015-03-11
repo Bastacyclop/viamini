@@ -3,6 +3,8 @@
 
 #include "util.h"
 
+/// A self-balancing binary search tree.
+
 typedef struct AVLNode AVLNode;
 struct AVLNode {
     size_t height;
@@ -14,7 +16,6 @@ struct AVLNode {
 /// Returns the height of a node (0 if `n` is `NULL`).
 size_t AVLNode_height(const AVLNode* n);
 
-/// An AVL tree using linked nodes.
 typedef struct {
     AVLNode* root;
     const size_t elem_size;
@@ -37,7 +38,7 @@ bool AVLTree_is_empty(const AVLTree* avl);
 bool AVLTree_insert(AVLTree* avl, void* e);
 
 /// Removes an element from the tree.
-/// Returns `true` if an element was popped.
+/// Returns `true` if an element was popped,
 ///   and copies the element to `removed` if `removed` is not `NULL`.
 /// Returns `false` otherwise.
 /// The tree might be rebalanced.

@@ -8,6 +8,10 @@ typedef struct {
     uint8_t r, g, b;
 } Color;
 
+const Color RED;
+const Color GREEN;
+const Color BLUE;
+
 /// A set of colors.
 typedef struct {
     Color next;

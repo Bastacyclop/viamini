@@ -19,8 +19,9 @@ void check(const AVLTree* t) {
     }
 }
 
+// `n` can't be `NULL`.
 Meta check_node(const AVLNode* n) {
-    if (!n) exit(1);
+    assert(n);
     int32_t e = *(int32_t*)n->elem;
 
     Meta m;
@@ -59,13 +60,13 @@ void print_node(const AVLNode* n) {
 }
 
 int8_t cmp(const int32_t* a, const int32_t* b) {
-    int8_t cmp = 0;
     if (*a < *b) {
-        cmp = -1;
+        return -1;
     } else if (*a > *b) {
-        cmp =  1;
+        return  1;
+    } else {
+        return 0;
     }
-    return cmp;
 }
 
 int main() {

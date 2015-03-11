@@ -13,8 +13,8 @@ int main() {
 
     assert(*(int32_t*)List_peek(&l) == 9);
 
-    int32_t e;
     for (int32_t i = 0; i < N; i++) {
+        int32_t e = INT32_MAX;
         assert(List_pop(&l, &e));
         assert(e == (9 - i));
         assert(List_len(&l) == (size_t)(N - (i + 1)));
