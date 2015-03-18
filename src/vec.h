@@ -10,7 +10,7 @@
 
 typedef struct {
     void* data;
-    const size_t elem_size;
+    size_t elem_size;
     size_t len;
     size_t cap;
 } Vec;

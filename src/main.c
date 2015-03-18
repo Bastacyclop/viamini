@@ -1,7 +1,7 @@
 #include <pthread.h>
 
-#include "circuit.h"
-#include "output.h"
+#include "netlist.h"
+#include "display.h"
 
 Vec find_netlists(void);
 void handle(char* path);
@@ -28,20 +28,23 @@ void handle(char* path) {
     printf("handling `%s`.\n", path);
 
     char* display_path = change_extension(path, "svg");
-    char* intersection_path = change_extension(path, "intersection.svg");
+    char* intersection_path = change_extension(path, "int");
+    char* intersection_display_path = change_extension(path, "int.svg");
 
-    Circuit circuit = Circuit_from_file(path);
-    Circuit_to_svg(&circuit, display_path);
+    Netlist netlist = Netlist_from_file(path);
+    Netlist_to_svg(&netlist, display_path);
 
-    Vec intersections = Circuit_intersections_avl_sweep(&circuit);
-    Circuit_intersections_to_svg(&circuit, &intersections,
-                                 display_path, intersection_path);
+    Vec intersections = Netlist_intersections_avl_sweep(&netlist);
+    Netlist_intersections_to_file(&intersections, intersection_path);
+    Netlist_intersections_to_svg(&netlist, &intersections,
+                                 display_path, intersection_display_path);
     Vec_plain_drop(&intersections);
 
-    Circuit_drop(&circuit);
+    Netlist_drop(&netlist);
 
-    free(display_path);
+    free(intersection_display_path);
     free(intersection_path);
+    free(display_path);
 
     printf("`%s` "TERM_GREEN("✓")"\n", path);
     free(path);

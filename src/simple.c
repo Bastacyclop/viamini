@@ -1,5 +1,5 @@
-#include "circuit.h"
-#include "output.h"
+#include "netlist.h"
+#include "display.h"
 
 int main() {
     const char* path = "netlists/alea0030_030_10_088.net";
@@ -7,20 +7,20 @@ int main() {
     printf("handling `%s` ... ", path);
 
     char* display_path = change_extension(path, "svg");
-    char* intersection_path = change_extension(path, "intersection.svg");
+    char* intersection_display_path = change_extension(path, "int.svg");
 
-    Circuit circuit = Circuit_from_file(path);
-    Circuit_to_svg(&circuit, display_path);
+    Netlist netlist = Netlist_from_file(path);
+    Netlist_to_svg(&netlist, display_path);
 
-    Vec intersections = Circuit_intersections_list_sweep(&circuit);
-    Circuit_intersections_to_svg(&circuit, &intersections,
-                                 display_path, intersection_path);
+    Vec intersections = Netlist_intersections_list_sweep(&netlist);
+    Netlist_intersections_to_svg(&netlist, &intersections,
+                                 display_path, intersection_display_path);
     Vec_plain_drop(&intersections);
 
-    Circuit_drop(&circuit);
+    Netlist_drop(&netlist);
 
     free(display_path);
-    free(intersection_path);
+    free(intersection_display_path);
 
     printf(TERM_GREEN("✓")"\n");
 

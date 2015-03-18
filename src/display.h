@@ -1,7 +1,7 @@
-#ifndef OUTPUT_H
-#define OUTPUT_H
+#ifndef DISPLAY_H
+#define DISPLAY_H
 
-#include "circuit.h"
+#include "netlist.h"
 
 /// A color represented in RGB with values from `0` to `255`.
 typedef struct {
@@ -27,17 +27,17 @@ Color ColorSet_pop(ColorSet* cs);
 
 
 /// Outputs a postscript file showing the circuit.
-void Circuit_to_ps(const Circuit* c, const char* path);
+void Netlist_to_ps(const Netlist* nl, const char* path);
 
 /// Outputs a postscript file, adding the circuit intersections to the base.
-void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
+void Netlist_intersections_to_ps(const Netlist* nl, const Vec* intersections,
                                  const char* base_path, const char* file_path);
 
 /// Outputs an svg file showing the circuit.
-void Circuit_to_svg(const Circuit* c, const char* path);
+void Netlist_to_svg(const Netlist* nl, const char* path);
 
 /// Outputs an svg file, adding the circuit intersections to the base file.
-void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
+void Netlist_intersections_to_svg(const Netlist* nl, const Vec* intersections,
                                   const char* base_path, const char* file_path);
 
-#endif // OUTPUT_H
+#endif // DISPLAY_H

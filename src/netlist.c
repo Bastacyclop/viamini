@@ -1,7 +1,7 @@
 #include "binary_heap.h"
 #include "list.h"
 #include "avl_tree.h"
-#include "circuit.h"
+#include "netlist.h"
 
 static
 Net net_from_file(FILE* f);
@@ -47,7 +47,7 @@ typedef struct {
 } Breakpoint;
 
 static
-BinaryHeap sweep_init(const Circuit* c);
+BinaryHeap sweep_init(const Netlist* nl);
 static
 bool sweep_order(const Breakpoint* a, const Breakpoint* b);
 static
@@ -95,7 +95,7 @@ GraphNode* new_graph_node(GraphNodeType t, void* d);
     exit(1);                                        \
 }
 
-Circuit Circuit_from_file(const char* path) {
+Netlist Netlist_from_file(const char* path) {
     FILE* f = fopen(path, "r");
     if (!f) {
         perror("cannot read circuit input file");
@@ -121,7 +121,7 @@ Circuit Circuit_from_file(const char* path) {
 
     fclose(f);
 
-    return (Circuit) {
+    return (Netlist) {
         .nets = nets,
         .aabb = compute_aabb(&nets)
     };
@@ -225,8 +225,8 @@ void AABB_include(AABB* aabb, Point p) {
     }
 }
 
-void Circuit_drop(Circuit* c) {
-    Vec_drop(&c->nets, (void (*)(void*))drop_net);
+void Netlist_drop(Netlist* nl) {
+    Vec_drop(&nl->nets, (void (*)(void*))drop_net);
 }
 
 void drop_net(Net* net) {
@@ -234,12 +234,12 @@ void drop_net(Net* net) {
     Vec_plain_drop(&net->segments);
 }
 
-void Circuit_print(const Circuit* c) {
-    size_t net_count = Vec_len(&c->nets);
+void Netlist_print(const Netlist* nl) {
+    size_t net_count = Vec_len(&nl->nets);
     printf("Net count: %zu\n", net_count);
 
     for (size_t i = 0; i < net_count; i++) {
-        const Net* net = Vec_get(&c->nets, i);
+        const Net* net = Vec_get(&nl->nets, i);
         size_t point_count = Vec_len(&net->points);
         size_t segment_count = Vec_len(&net->segments);
         printf("Net: %zu %zu %zu\n", i, point_count, segment_count);
@@ -284,12 +284,12 @@ bool hv_intersects(SegmentRef h, SegmentRef v, Point* sect) {
     return false;
 }
 
-IntersectionVec Circuit_intersections_naive(const Circuit* c) {
+IntersectionVec Netlist_intersections_naive(const Netlist* nl) {
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
-    size_t net_count = Vec_len(&c->nets);
+    size_t net_count = Vec_len(&nl->nets);
 
     for (size_t i = 0; i < net_count; i++) {
-        const Net* a_net = Vec_get(&c->nets, i);
+        const Net* a_net = Vec_get(&nl->nets, i);
         size_t a_segment_count = Vec_len(&a_net->segments);
 
         for (size_t s = 0; s < a_segment_count; s++) {
@@ -301,7 +301,7 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
 
             // Internet intersections
             for (size_t j = i + 1; j < net_count; j++) {
-                const Net* b_net = Vec_get(&c->nets, j);
+                const Net* b_net = Vec_get(&nl->nets, j);
                 size_t b_segment_count = Vec_len(&b_net->segments);
 
                 for (size_t t = 0; t < b_segment_count; t++) {
@@ -329,8 +329,8 @@ IntersectionVec Circuit_intersections_naive(const Circuit* c) {
 }
 
 
-IntersectionVec Circuit_intersections_vec_sweep(const Circuit* c) {
-    BinaryHeap breakpoints = sweep_init(c);
+IntersectionVec Netlist_intersections_vec_sweep(const Netlist* nl) {
+    BinaryHeap breakpoints = sweep_init(nl);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     Vec segments = Vec_new(sizeof(BreakpointData));
 
@@ -356,13 +356,13 @@ IntersectionVec Circuit_intersections_vec_sweep(const Circuit* c) {
     return intersections;
 }
 
-BinaryHeap sweep_init(const Circuit* c) {
+BinaryHeap sweep_init(const Netlist* nl) {
     BinaryHeap breakpoints = BinaryHeap_new(sizeof(Breakpoint),
         (bool (*)(const void*, const void*))sweep_order);
 
-    size_t net_count = Vec_len(&c->nets);
+    size_t net_count = Vec_len(&nl->nets);
     for (size_t n = 0; n < net_count; n++) {
-        const Net* net = Vec_get(&c->nets, n);
+        const Net* net = Vec_get(&nl->nets, n);
 
         size_t segment_count = Vec_len(&net->segments);
         for (size_t s = 0; s < segment_count; s++) {
@@ -458,8 +458,8 @@ void vec_sweep_check_intersections(IntersectionVec* intersections,
 }
 
 
-IntersectionVec Circuit_intersections_list_sweep(const Circuit* c) {
-    BinaryHeap breakpoints = sweep_init(c);
+IntersectionVec Netlist_intersections_list_sweep(const Netlist* nl) {
+    BinaryHeap breakpoints = sweep_init(nl);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     List segments = List_new(sizeof(BreakpointData));
 
@@ -576,8 +576,8 @@ void list_sweep_check_intersections(IntersectionVec* intersections,
     }
 }
 
-IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c) {
-    BinaryHeap breakpoints = sweep_init(c);
+IntersectionVec Netlist_intersections_avl_sweep(const Netlist* nl) {
+    BinaryHeap breakpoints = sweep_init(nl);
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
     AVLTree segments = AVLTree_new(sizeof(BreakpointData),
                                    (int8_t (*)(const void*, const void*))compare);
@@ -684,6 +684,22 @@ void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
     }
 }
 
+void Netlist_intersections_to_file(IntersectionVec* inters, const char* path) {
+    FILE* f = fopen(path, "w");
+
+    size_t inter_count = Vec_len(inters);
+    for (size_t i = 0; i < inter_count; i++) {
+        const Intersection* inter = Vec_get(inters, i);
+
+        fprintf(f, "%zu %zu %zu %zu\n",
+                inter->a.net, inter->a.seg,
+                inter->b.net, inter->b.seg);
+    }
+
+    fclose(f);
+}
+
+
 GraphNode* new_graph_node(GraphNodeType t, void* d) {
     GraphNode* n = malloc(sizeof(GraphNode));
     assert_alloc(n);
@@ -696,27 +712,9 @@ GraphNode* new_graph_node(GraphNodeType t, void* d) {
     return n;
 }
 
-Graph Graph_new(const Circuit* c, const IntersectionVec* inters) {
-    size_t net_count = Vec_len(&c->nets);
-    for (size_t n = 0; n < net_count; n++) {
-        const Net* net = Vec_get(&c->nets, n);
-
-        size_t point_count = Vec_len(&net->points);
-        for (size_t p = 0; p < point_count; p++) {
-
-        }
-
-        size_t seg_count = Vec_len(&net->points);
-        for (size_t s = 0; s < seg_count; s++) {
-
-        }
-    }
-
-    size_t inter_count = Vec_len(inters);
-    for (size_t i = 0; i < inter_count; i++) {
-
-    }
-
+Graph Graph_new(const Netlist* nl, const IntersectionVec* intersections) {
+    (void) nl;
+    (void) intersections;
     return (Graph) {
         .n = new_graph_node(POINT_NODE, NULL)
     };

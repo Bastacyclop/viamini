@@ -19,7 +19,7 @@ size_t AVLNode_height(const AVLNode* n);
 typedef struct {
     AVLNode* root;
     const size_t elem_size;
-    int8_t (*const cmp)(const void*, const void*);
+    int8_t (*cmp)(const void*, const void*);
 } AVLTree;
 
 /// Creates an empty tree that will be ordered by `compare`.

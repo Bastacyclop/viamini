@@ -48,16 +48,16 @@ bench: $(BLDDIR)/bench
 	gnuplot < plot_cmds
 	@echo "[33m---------------------------------------------[0m"
 
-CIRCUIT_DEP := $(BLDDIR)/circuit.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/util.o
+NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/util.o
 
-$(BLDDIR)/simple: $(SRCDIR)/simple.c $(BLDDIR)/output.o $(CIRCUIT_DEP) builddir
-	$(CC) $(CFLAGS) -lm $(SRCDIR)/simple.c $(BLDDIR)/output.o $(CIRCUIT_DEP) -o $(BLDDIR)/simple
+$(BLDDIR)/simple: $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/simple
 
-$(BLDDIR)/bench: $(SRCDIR)/bench.c $(CIRCUIT_DEP) builddir
-	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(CIRCUIT_DEP) -o $(BLDDIR)/bench
+$(BLDDIR)/bench: $(SRCDIR)/bench.c $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(NETLIST_DEP) -o $(BLDDIR)/bench
 	
-$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/output.o $(CIRCUIT_DEP) builddir
-	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/main.c $(BLDDIR)/output.o $(CIRCUIT_DEP) -o $(BLDDIR)/main
+$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/main.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/main
 
 $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec

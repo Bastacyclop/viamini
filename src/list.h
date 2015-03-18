@@ -14,7 +14,7 @@ struct ListNode {
 typedef struct {
     ListNode* head;
     size_t len;
-    const size_t elem_size;
+    size_t elem_size;
 } List;
 
 /// Creates an empty list.

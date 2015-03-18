@@ -1,7 +1,6 @@
 #include <time.h>
 
-#include "circuit.h"
-#include "output.h"
+#include "netlist.h"
 
 Vec find_netlists(void);
 void vec_str_drop(char** s);
@@ -37,41 +36,41 @@ int main() {
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
-    fprintf(bench_data, "%zu 0 0 0 0\n", Vec_len(&paths)); // placeholder
+    fprintf(bench_data, "%zu 0 0 0 0\n", Vec_len(&paths) + 1); // placeholder
 
     char* path;
     while (Vec_pop(&paths, &path)) {
         printf(" - handling `%s`:\n", path);
 
-        Circuit circuit = Circuit_from_file(path);
+        Netlist netlist = Netlist_from_file(path);
 
         measure_exec_time("   intersections naive",
-            Vec intersections = Circuit_intersections_naive(&circuit);
+            Vec intersections = Netlist_intersections_naive(&netlist);
         )
         uint32_t naive_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections);
 
         measure_exec_time("   intersections vec sweep",
-            Vec intersections2 = Circuit_intersections_vec_sweep(&circuit);
+            Vec intersections2 = Netlist_intersections_vec_sweep(&netlist);
         )
         uint32_t vec_sweep_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections2);
 
         measure_exec_time("   intersections list sweep",
-            Vec intersections3 = Circuit_intersections_list_sweep(&circuit);
+            Vec intersections3 = Netlist_intersections_list_sweep(&netlist);
         )
         uint32_t list_sweep_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections3);
 
         measure_exec_time("   intersections avl sweep",
-            Vec intersections4 = Circuit_intersections_avl_sweep(&circuit);
+            Vec intersections4 = Netlist_intersections_avl_sweep(&netlist);
         )
         uint32_t avl_sweep_time = (uint32_t)delta_time;
         Vec_plain_drop(&intersections4);
 
-        Circuit_drop(&circuit);
+        Netlist_drop(&netlist);
 
-        fprintf(bench_data, "%zu %u %u %u %u\n", Vec_len(&paths),
+        fprintf(bench_data, "%zu %u %u %u %u\n", Vec_len(&paths) + 1,
                 naive_time, vec_sweep_time, list_sweep_time, avl_sweep_time);
         puts(TERM_GREEN("   ✓"));
         free(path);

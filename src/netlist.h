@@ -29,16 +29,16 @@ typedef struct {
 typedef struct {
     NetVec nets;
     AABB aabb;
-} Circuit;
+} Netlist;
 
 /// Loads a circuit from a file.
-Circuit Circuit_from_file(const char* path);
+Netlist Netlist_from_file(const char* path);
 
 /// Releases the circuit resources.
-void Circuit_drop(Circuit* c);
+void Netlist_drop(Netlist* nl);
 
 /// Prints the file representation of the circuit on the terminal.
-void Circuit_print(const Circuit* c);
+void Netlist_print(const Netlist* nl);
 
 typedef struct {
     size_t net;
@@ -53,38 +53,40 @@ typedef struct {
 } Intersection;
 
 /// Finds the circuit intersections by comparing the segments of different nets two by two.
-IntersectionVec Circuit_intersections_naive(const Circuit* c);
+IntersectionVec Netlist_intersections_naive(const Netlist* nl);
 
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses a vector to manage current horizontal segments.
-IntersectionVec Circuit_intersections_vec_sweep(const Circuit* c);
+IntersectionVec Netlist_intersections_vec_sweep(const Netlist* nl);
 
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses an ordered list to manage current horizontal segments.
-IntersectionVec Circuit_intersections_list_sweep(const Circuit* c);
+IntersectionVec Netlist_intersections_list_sweep(const Netlist* nl);
 
 /// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses an AVL tree to manage current horizontal segments.
-IntersectionVec Circuit_intersections_avl_sweep(const Circuit* c);
+IntersectionVec Netlist_intersections_avl_sweep(const Netlist* nl);
+
+/// Saves the circuit intersections to a file.
+void Netlist_intersections_to_file(IntersectionVec* ints, const char* path);
 
 typedef enum {
     POINT_NODE,
     SEGMENT_NODE
 } GraphNodeType;
 
-typedef struct GraphNode GraphNode;
 typedef Vec GraphNodeVec;
-struct GraphNode {
+typedef struct {
     GraphNodeType type;
     void* data;
     GraphNodeVec continuity;
     GraphNodeVec conflict;
-};
+} GraphNode;
 
 typedef struct {
     GraphNode* n;
 } Graph;
 
-Graph Graph_new(const Circuit* c, const IntersectionVec* inters);
+Graph Graph_new(const Netlist* nl, const IntersectionVec* intersections);
 
 #endif // CIRCUIT_H

@@ -1,6 +1,6 @@
 #include <math.h>
 
-#include "output.h"
+#include "display.h"
 
 const Color RED   = { 255, 0, 0 };
 const Color GREEN = { 0, 255, 0 };
@@ -65,19 +65,19 @@ Color ColorSet_pop(ColorSet* cs) {
     return c;
 }
 
-void Circuit_to_ps(const Circuit* c, const char* path) {
+void Netlist_to_ps(const Netlist* nl, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) {
         perror("cannot open postscript file");
         exit(1);
     }
 
-    size_t net_count = Vec_len(&c->nets);
+    size_t net_count = Vec_len(&nl->nets);
     ColorSet colors = ColorSet_new(net_count);
-    Transform trans = compute_ps_transform(&c->aabb);
+    Transform trans = compute_ps_transform(&nl->aabb);
 
     for (size_t i = 0; i < net_count; i++) {
-        const Net* net = Vec_get(&c->nets, i);
+        const Net* net = Vec_get(&nl->nets, i);
         size_t point_count = Vec_len(&net->points);
         size_t segment_count = Vec_len(&net->segments);
 
@@ -141,7 +141,7 @@ Transform compute_ps_transform(const AABB* aabb) {
     };
 }
 
-void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
+void Netlist_intersections_to_ps(const Netlist* nl, const Vec* intersections,
                                  const char* base_path, const char* file_path) {
     FILE* base = fopen(base_path, "r");
     if (!base) {
@@ -161,7 +161,7 @@ void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
 
     fclose(base);
 
-    Transform trans = compute_ps_transform(&c->aabb);
+    Transform trans = compute_ps_transform(&nl->aabb);
     ps_set_color(f, RED);
 
     for (size_t i = 0; i < Vec_len(intersections); i++) {
@@ -172,7 +172,7 @@ void Circuit_intersections_to_ps(const Circuit* c, const Vec* intersections,
     fclose(f);
 }
 
-void Circuit_to_svg(const Circuit* c, const char* path) {
+void Netlist_to_svg(const Netlist* nl, const char* path) {
     FILE* f = fopen(path, "w");
     if (!f) {
         perror("cannot open svg file");
@@ -181,12 +181,12 @@ void Circuit_to_svg(const Circuit* c, const char* path) {
 
     fputs("<svg version=\"1.2\" baseProfile=\"tiny\" xmlns=\"http://www.w3.org/2000/svg\">\n", f);
 
-    size_t net_count = Vec_len(&c->nets);
+    size_t net_count = Vec_len(&nl->nets);
     ColorSet colors = ColorSet_new(net_count);
-    Transform trans = compute_svg_transform(&c->aabb);
+    Transform trans = compute_svg_transform(&nl->aabb);
 
     for (size_t i = 0; i < net_count; i++) {
-        const Net* net = Vec_get(&c->nets, i);
+        const Net* net = Vec_get(&nl->nets, i);
         size_t point_count = Vec_len(&net->points);
         size_t segment_count = Vec_len(&net->segments);
 
@@ -254,7 +254,7 @@ Transform compute_svg_transform(const AABB* aabb) {
     };
 }
 
-void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
+void Netlist_intersections_to_svg(const Netlist* nl, const Vec* intersections,
                                   const char* base_path, const char* file_path) {
     FILE* base = fopen(base_path, "r");
     if (!base) {
@@ -274,7 +274,7 @@ void Circuit_intersections_to_svg(const Circuit* c, const Vec* intersections,
 
     fclose(base);
 
-    Transform trans = compute_svg_transform(&c->aabb);
+    Transform trans = compute_svg_transform(&nl->aabb);
     svg_begin_color(f, RED);
 
     for (size_t i = 0; i < Vec_len(intersections); i++) {
