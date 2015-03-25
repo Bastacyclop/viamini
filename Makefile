@@ -26,7 +26,7 @@ $(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
 	@$(CC) -c $(CFLAGS) $< -o $@
 
 .PHONY: test
-test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/binary_heap $(BLDDIR)/tests/avl_tree $(BLDDIR)/tests/list
+test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/bit_set $(BLDDIR)/tests/binary_heap $(BLDDIR)/tests/avl_tree $(BLDDIR)/tests/list
 	@echo "[33m--------------- running tests ---------------[0m"
 	@for t in $(BLDDIR)/tests/*; do \
 	  if "./$$t"; then \
@@ -48,7 +48,7 @@ bench: $(BLDDIR)/bench
 	gnuplot < plot_cmds
 	@echo "[33m---------------------------------------------[0m"
 
-NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/util.o
+NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/bit_set.o $(BLDDIR)/util.o
 
 $(BLDDIR)/simple: $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/simple
@@ -61,6 +61,9 @@ $(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
 
 $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec
+
+$(BLDDIR)/tests/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/bit_set
 
 $(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/binary_heap

@@ -2,6 +2,7 @@
 #define CIRCUIT_H
 
 #include "vec.h"
+#include "bit_set.h"
 
 typedef Vec PointVec;
 typedef struct {
@@ -70,6 +71,12 @@ IntersectionVec Netlist_intersections_avl_sweep(const Netlist* nl);
 /// Saves the circuit intersections to a file.
 void Netlist_intersections_to_file(IntersectionVec* ints, const char* path);
 
+typedef Vec GraphEdgeVec;
+typedef struct {
+    size_t u;
+    size_t v;
+} GraphEdge;
+
 typedef enum {
     POINT_NODE,
     SEGMENT_NODE
@@ -78,15 +85,25 @@ typedef enum {
 typedef Vec GraphNodeVec;
 typedef struct {
     GraphNodeType type;
-    void* data;
-    GraphNodeVec continuity;
-    GraphNodeVec conflict;
+    union {
+        const Point* point;
+        const Segment* segment;
+    };
+    GraphEdgeVec continuity;
+    GraphEdgeVec conflict;
 } GraphNode;
 
 typedef struct {
-    GraphNode* n;
+    GraphNodeVec nodes;
+    Vec net_offsets;
 } Graph;
 
-Graph Graph_new(const Netlist* nl, const IntersectionVec* intersections);
+/// Creates the graph associated to the netlist and its intersections.
+Graph Graph_new(const Netlist* nl, const char* int_path);
+
+BitSet Graph_hv_solve(const Graph* g, const Netlist* nl);
+
+/// Releases the graph resources.
+void Graph_drop(Graph* g);
 
 #endif // CIRCUIT_H

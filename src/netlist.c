@@ -1,6 +1,7 @@
 #include "binary_heap.h"
 #include "list.h"
 #include "avl_tree.h"
+
 #include "netlist.h"
 
 static
@@ -88,7 +89,7 @@ void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
                           const BreakpointData* vd);
 
 static
-GraphNode* new_graph_node(GraphNodeType t, void* d);
+void graph_node_drop(GraphNode* n);
 
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
@@ -699,23 +700,155 @@ void Netlist_intersections_to_file(IntersectionVec* inters, const char* path) {
     fclose(f);
 }
 
+Graph Graph_new(const Netlist* nl, const char* int_path) {
+    size_t nodes_count = 0;
 
-GraphNode* new_graph_node(GraphNodeType t, void* d) {
-    GraphNode* n = malloc(sizeof(GraphNode));
-    assert_alloc(n);
+    size_t net_count = Vec_len(&nl->nets);
+    Vec net_offsets = Vec_with_capacity(sizeof(size_t),
+                                        net_count);
+    for (size_t n = 0; n < net_count; n++) {
+        const Net* net = Vec_get(&nl->nets, n);
+        Vec_push(&net_offsets, &nodes_count);
 
-    *n = (GraphNode) {
-        .type = t, .data = d,
-        .continuity = Vec_new(sizeof(GraphNode)),
-        .conflict = Vec_new(sizeof(GraphNode))
+        nodes_count += Vec_len(&net->points);
+        nodes_count += Vec_len(&net->segments);
+    }
+
+    GraphNodeVec nodes = Vec_with_capacity(sizeof(GraphNode),
+                                           nodes_count);
+
+    for (size_t n = 0; n < net_count; n++) {
+        size_t net_offset = Vec_len(&nodes);
+        const Net* net = Vec_get(&nl->nets, n);
+
+        size_t point_count = Vec_len(&net->points);
+        for (size_t p = 0; p < point_count; p++) {
+            GraphNode node = {
+                .type = POINT_NODE,
+                .point = Vec_get(&net->points, p),
+                .continuity = Vec_new(sizeof(GraphEdge)),
+                .conflict = Vec_new(sizeof(GraphEdge))
+            };
+            Vec_push(&nodes, &node);
+        }
+
+        size_t segment_count = Vec_len(&net->segments);
+        for (size_t s = 0; s < segment_count; s++) {
+            GraphNode node = {
+                .type = SEGMENT_NODE,
+                .segment = Vec_get(&net->segments, s),
+                .continuity = Vec_new(sizeof(GraphEdge)),
+                .conflict = Vec_new(sizeof(GraphEdge))
+            };
+            size_t node_index = Vec_len(&nodes);
+            size_t beg_index = (net_offset + node.segment->beg);
+            size_t end_index = (net_offset + node.segment->end);
+            GraphEdge from_beg = { .u = beg_index,  .v = node_index };
+            GraphEdge to_beg   = { .u = node_index, .v = beg_index  };
+            GraphEdge from_end = { .u = end_index,  .v = node_index };
+            GraphEdge to_end   = { .u = node_index, .v = end_index  };
+            Vec_push(&node.continuity, &to_beg);
+            Vec_push(&node.continuity, &to_end);
+            GraphNode* beg = Vec_get_mut(&nodes, beg_index);
+            GraphNode* end = Vec_get_mut(&nodes, end_index);
+            Vec_push(&beg->continuity, &from_beg);
+            Vec_push(&end->continuity, &from_end);
+            Vec_push(&nodes, &node);
+        }
+    }
+
+    FILE* int_f = fopen(int_path, "r");
+
+    char line[255];
+    while (fgets(line, 255, int_f)) {
+        SegmentLoc a_loc, b_loc;
+        if (sscanf(line, "%zu %zu %zu %zu",
+                   &a_loc.net, &a_loc.seg, &b_loc.net, &b_loc.seg) != 4) {
+            SYNTAX_ERROR("expected `a_net a_seg b_net b_seg` intersection description");
+        }
+
+        size_t a_net_offset = *(const size_t*)Vec_get(&net_offsets, a_loc.net);
+        size_t b_net_offset = *(const size_t*)Vec_get(&net_offsets, b_loc.net);
+        const Net* a_net = Vec_get(&nl->nets, a_loc.net);
+        const Net* b_net = Vec_get(&nl->nets, b_loc.net);
+        size_t a_index = a_net_offset + Vec_len(&a_net->points) + a_loc.seg;
+        size_t b_index = b_net_offset + Vec_len(&b_net->points) + b_loc.seg;
+        GraphEdge ab_conflict = { .u = a_index, .v = b_index };
+        GraphEdge ba_conflict = { .u = b_index, .v = a_index };
+        GraphNode* a = Vec_get_mut(&nodes, a_index);
+        GraphNode* b = Vec_get_mut(&nodes, b_index);
+        Vec_push(&a->conflict, &ab_conflict);
+        Vec_push(&b->conflict, &ba_conflict);
+    }
+
+    fclose(int_f);
+
+    return (Graph) {
+        .nodes = nodes,
+        .net_offsets = net_offsets
     };
-    return n;
 }
 
-Graph Graph_new(const Netlist* nl, const IntersectionVec* intersections) {
-    (void) nl;
-    (void) intersections;
-    return (Graph) {
-        .n = new_graph_node(POINT_NODE, NULL)
-    };
+BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
+    // point: false -> no via
+    // point: true -> via
+    // segment: false -> face A
+    // segment: true -> face B
+    BitSet solution = BitSet_with_capacity(Vec_len(&g->nodes));
+
+    size_t offset = 0;
+    size_t net_count = Vec_len(&nl->nets);
+    for (size_t n = 0; n < net_count; n++) {
+        const Net* net = Vec_get(&nl->nets, n);
+        size_t point_count = Vec_len(&net->points);
+        size_t segment_count = Vec_len(&net->segments);
+        offset += point_count;
+
+        for (size_t i = offset; i < (offset + segment_count); i++) {
+            const GraphNode* node = Vec_get(&g->nodes, i);
+            const Point* beg = Vec_get(&net->points, node->segment->beg);
+            const Point* end = Vec_get(&net->points, node->segment->end);
+            if (beg->x == end->x) { // |
+                BitSet_insert(&solution, i);
+            } // else -,  is already false
+        }
+        offset += segment_count;
+    }
+
+    offset = 0;
+    for (size_t n = 0; n < net_count; n++) {
+        const Net* net = Vec_get(&nl->nets, n);
+        size_t point_count = Vec_len(&net->points);
+        size_t segment_count = Vec_len(&net->segments);
+
+        for (size_t i = offset; i < (offset + point_count); i++) {
+            const GraphNode* node = Vec_get(&g->nodes, i);
+            size_t continuity_count = Vec_len(&node->continuity);
+            if (continuity_count > 0) {
+                const GraphEdge* first_edge = Vec_get(&node->continuity, 0);
+                bool first_face = BitSet_contains(&solution, first_edge->v);
+                for (size_t c = 1; c < continuity_count; c++) {
+                    const GraphEdge* edge = Vec_get(&node->continuity, c);
+                    bool face = BitSet_contains(&solution, edge->v);
+                    if (face != first_face) { // a via is needed
+                        BitSet_insert(&solution, i);
+                        break;
+                    }
+                }
+            }
+        }
+        offset += point_count + segment_count;
+    }
+
+    return solution;
+}
+
+void Graph_drop(Graph* g) {
+    Vec_drop(&g->nodes, (void (*)(void*))graph_node_drop);
+    Vec_plain_drop(&g->net_offsets);
+}
+
+void graph_node_drop(GraphNode* n) {
+    Vec_plain_drop(&n->continuity);
+    Vec_plain_drop(&n->conflict);
 }
