@@ -2,8 +2,9 @@
 
 #include "netlist.h"
 
+/// Compares the different intersection finding methods.
+
 Vec find_netlists(void);
-void vec_str_drop(char** s);
 
 #define measure_exec_time(msg, block)                                   \
     time_mark = clock();                                                \

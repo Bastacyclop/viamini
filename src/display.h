@@ -3,6 +3,8 @@
 
 #include "netlist.h"
 
+/// Display related functions
+
 /// A color represented in RGB with values from `0` to `255`.
 typedef struct {
     uint8_t r, g, b;

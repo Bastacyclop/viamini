@@ -3,7 +3,7 @@
 
 #include "vec.h"
 
-/// A dynamic bit set.
+/// A dynamically allocated bit set.
 
 // TODO is_disjoint, is_subset, is_superset, ...
 //      shrink_to_fit, reserve, check overflows, ...

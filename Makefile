@@ -19,7 +19,7 @@ else
 		  -fno-omit-frame-pointer -Winline -fstrict-aliasing
 endif
 
-all: $(BLDDIR)/main $(BLDDIR)/simple
+all: $(BLDDIR)/intersect $(BLDDIR)/intersect_all
 
 $(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
 	@echo "Compiling $< into $@"
@@ -50,15 +50,15 @@ bench: $(BLDDIR)/bench
 
 NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/bit_set.o $(BLDDIR)/util.o
 
-$(BLDDIR)/simple: $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
-	$(CC) $(CFLAGS) -lm $(SRCDIR)/simple.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/simple
+$(BLDDIR)/intersect: $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/intersect
+
+$(BLDDIR)/intersect_all: $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/intersect_all
 
 $(BLDDIR)/bench: $(SRCDIR)/bench.c $(NETLIST_DEP) builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(NETLIST_DEP) -o $(BLDDIR)/bench
 	
-$(BLDDIR)/main: $(SRCDIR)/main.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
-	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/main.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/main
-
 $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec
 

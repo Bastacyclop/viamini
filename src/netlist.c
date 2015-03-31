@@ -287,12 +287,12 @@ bool hv_intersects(SegmentRef h, SegmentRef v, Point* sect) {
 
 IntersectionVec Netlist_intersections_naive(const Netlist* nl) {
     IntersectionVec intersections = Vec_new(sizeof(Intersection));
-    size_t net_count = Vec_len(&nl->nets);
 
+    size_t net_count = Vec_len(&nl->nets);
     for (size_t i = 0; i < net_count; i++) {
         const Net* a_net = Vec_get(&nl->nets, i);
-        size_t a_segment_count = Vec_len(&a_net->segments);
 
+        size_t a_segment_count = Vec_len(&a_net->segments);
         for (size_t s = 0; s < a_segment_count; s++) {
             const Segment* a = Vec_get(&a_net->segments, s);
             SegmentRef a_ref = {
@@ -303,8 +303,8 @@ IntersectionVec Netlist_intersections_naive(const Netlist* nl) {
             // Internet intersections
             for (size_t j = i + 1; j < net_count; j++) {
                 const Net* b_net = Vec_get(&nl->nets, j);
-                size_t b_segment_count = Vec_len(&b_net->segments);
 
+                size_t b_segment_count = Vec_len(&b_net->segments);
                 for (size_t t = 0; t < b_segment_count; t++) {
                     const Segment* b = Vec_get(&b_net->segments, t);
                     SegmentRef b_ref = {
@@ -827,6 +827,7 @@ BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
             if (continuity_count > 0) {
                 const GraphEdge* first_edge = Vec_get(&node->continuity, 0);
                 bool first_face = BitSet_contains(&solution, first_edge->v);
+
                 for (size_t c = 1; c < continuity_count; c++) {
                     const GraphEdge* edge = Vec_get(&node->continuity, c);
                     bool face = BitSet_contains(&solution, edge->v);

@@ -4,6 +4,8 @@
 #include "vec.h"
 #include "bit_set.h"
 
+/// Netlist related functions
+
 typedef Vec PointVec;
 typedef struct {
     int32_t x;
@@ -32,13 +34,13 @@ typedef struct {
     AABB aabb;
 } Netlist;
 
-/// Loads a circuit from a file.
+/// Loads a netlist from a file.
 Netlist Netlist_from_file(const char* path);
 
-/// Releases the circuit resources.
+/// Releases the netlist resources.
 void Netlist_drop(Netlist* nl);
 
-/// Prints the file representation of the circuit on the terminal.
+/// Prints the file representation of the netlist on the terminal.
 void Netlist_print(const Netlist* nl);
 
 typedef struct {
@@ -53,22 +55,22 @@ typedef struct {
     Point sect;
 } Intersection;
 
-/// Finds the circuit intersections by comparing the segments of different nets two by two.
+/// Finds the netlist intersections by comparing the segments of different nets two by two.
 IntersectionVec Netlist_intersections_naive(const Netlist* nl);
 
-/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
+/// Finds the netlist intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses a vector to manage current horizontal segments.
 IntersectionVec Netlist_intersections_vec_sweep(const Netlist* nl);
 
-/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
+/// Finds the netlist intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses an ordered list to manage current horizontal segments.
 IntersectionVec Netlist_intersections_list_sweep(const Netlist* nl);
 
-/// Finds the circuit intersections by sweeping over the different breakpoints of the x axis.
+/// Finds the netlist intersections by sweeping over the different breakpoints of the x axis.
 /// This version uses an AVL tree to manage current horizontal segments.
 IntersectionVec Netlist_intersections_avl_sweep(const Netlist* nl);
 
-/// Saves the circuit intersections to a file.
+/// Saves the netlist intersections to a file.
 void Netlist_intersections_to_file(IntersectionVec* ints, const char* path);
 
 typedef Vec GraphEdgeVec;

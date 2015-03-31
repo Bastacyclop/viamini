@@ -364,23 +364,21 @@ void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path) {
             size_t conflict_count = Vec_len(&node->conflict);
             for (size_t c = 0; c < conflict_count; c++) {
                 const GraphEdge* edge = Vec_get(&node->conflict, c);
-                if (true) {//!BitSet_contains(&visited, edge->v)) {
-                    const GraphNode* conflict = Vec_get(&g->nodes, edge->v);
-                    size_t c_n = 0;
-                    for (size_t j = 0; j < net_count; j++) {
-                        if (edge->v > *(const size_t*)Vec_get(&g->net_offsets, j)) {
-                            c_n = j;
-                        } else {
-                            break;
-                        }
+                const GraphNode* conflict = Vec_get(&g->nodes, edge->v);
+                size_t c_n = 0;
+                for (size_t j = 0; j < net_count; j++) {
+                    if (edge->v > *(const size_t*)Vec_get(&g->net_offsets, j)) {
+                        c_n = j;
+                    } else {
+                        break;
                     }
-                    const Net* c_net = Vec_get(&nl->nets, c_n);
-                    const Point* c_beg = Vec_get(&c_net->points,
-                                                 conflict->segment->beg);
-                    const Point* c_end = Vec_get(&c_net->points,
-                                                 conflict->segment->end);
-                    svg_draw_line(f, mid, middle_of(c_beg, c_end), &trans);
                 }
+                const Net* c_net = Vec_get(&nl->nets, c_n);
+                const Point* c_beg = Vec_get(&c_net->points,
+                                             conflict->segment->beg);
+                const Point* c_end = Vec_get(&c_net->points,
+                                             conflict->segment->end);
+                svg_draw_line(f, mid, middle_of(c_beg, c_end), &trans);
             }
         }
         offset += segment_count;
@@ -440,8 +438,7 @@ void Solution_to_svg(const BitSet* sol, const Graph* g,
             const GraphNode* node = Vec_get(&g->nodes, i);
             const Point* beg = Vec_get(&net->points, node->segment->beg);
             const Point* end = Vec_get(&net->points, node->segment->end);
-            Point mid = middle_of(beg, end);
-            svg_draw_point(f, mid, &trans);
+            svg_draw_point(f, middle_of(beg, end), &trans);
         }
         offset += segment_count;
 

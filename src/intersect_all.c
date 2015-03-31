@@ -3,6 +3,8 @@
 #include "netlist.h"
 #include "display.h"
 
+/// Finds the intersections in all the netlists.
+
 Vec find_netlists(void);
 void handle(char* path);
 
