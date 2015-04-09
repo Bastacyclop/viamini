@@ -43,7 +43,7 @@ int main() {
     }
 
     assert(BinaryHeap_is_empty(&bh));
-    BinaryHeap_plain_drop(&bh);
+    BinaryHeap_drop(&bh);
 
     return EXIT_SUCCESS;
 }

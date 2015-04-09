@@ -253,12 +253,12 @@ void AABB_include(AABB* aabb, Point p) {
 }
 
 void Netlist_drop(Netlist* nl) {
-    Vec_drop(&nl->nets, (void (*)(void*))drop_net);
+    Vec_drop_with(&nl->nets, (void (*)(void*))drop_net);
 }
 
 void drop_net(Net* net) {
-    Vec_plain_drop(&net->points);
-    Vec_plain_drop(&net->segments);
+    Vec_drop(&net->points);
+    Vec_drop(&net->segments);
 }
 
 void Netlist_print(const Netlist* nl) {
@@ -377,8 +377,8 @@ IntersectionVec Netlist_intersections_vec_sweep(const Netlist* nl) {
         }
     }
 
-    Vec_plain_drop(&segments);
-    BinaryHeap_plain_drop(&breakpoints);
+    Vec_drop(&segments);
+    BinaryHeap_drop(&breakpoints);
 
     return intersections;
 }
@@ -506,8 +506,8 @@ IntersectionVec Netlist_intersections_list_sweep(const Netlist* nl) {
         }
     }
 
-    List_plain_clear(&segments);
-    BinaryHeap_plain_drop(&breakpoints);
+    List_clear(&segments);
+    BinaryHeap_drop(&breakpoints);
 
     return intersections;
 }
@@ -625,8 +625,8 @@ IntersectionVec Netlist_intersections_avl_sweep(const Netlist* nl) {
         }
     }
 
-    AVLTree_plain_clear(&segments);
-    BinaryHeap_plain_drop(&breakpoints);
+    AVLTree_clear(&segments);
+    BinaryHeap_drop(&breakpoints);
 
     return intersections;
 }
@@ -814,13 +814,13 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
 }
 
 void Graph_drop(Graph* g) {
-    Vec_drop(&g->nodes, (void (*)(void*))graph_node_drop);
-    Vec_plain_drop(&g->net_offsets);
+    Vec_drop_with(&g->nodes, (void (*)(void*))graph_node_drop);
+    Vec_drop(&g->net_offsets);
 }
 
 void graph_node_drop(GraphNode* n) {
-    Vec_plain_drop(&n->continuity);
-    Vec_plain_drop(&n->conflict);
+    Vec_drop(&n->continuity);
+    Vec_drop(&n->conflict);
 }
 
 BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
@@ -887,14 +887,14 @@ BitSet Graph_odd_cycle_solve(const Graph* g) {
     Vec cycle = Graph_find_odd_cycle(g, &marks);
     while (!Vec_is_empty(&cycle)) {
         add_via_with_cycle(&solution, &cycle, g);
-        Vec_plain_drop(&cycle);
+        Vec_drop(&cycle);
 
         reset_marks(&marks, &solution, g);
         cycle = Graph_find_odd_cycle(g, &marks);
     }
-    Vec_plain_drop(&cycle);
+    Vec_drop(&cycle);
 
-    Vec_plain_drop(&marks);
+    Vec_drop(&marks);
 
     Graph_solve_faces(g, &solution);
 

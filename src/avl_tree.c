@@ -10,6 +10,10 @@ typedef enum {
 
 static
 AVLNode* new_node(void* e, size_t elem_size);
+static
+void may_drop_node(AVLNode* n);
+static
+void may_drop_node_with(AVLNode* n, void (*drop_elem)(void*));
 
 static
 size_t height(const AVLNode* n);
@@ -34,17 +38,45 @@ AVLNode* avl_remove(AVLTree* avl, AVLNode* n, const void* e, void* removed, bool
 static
 AVLNode* remove_max(AVLTree* avl, AVLNode* n, void* e);
 
-static
-void may_drop_node(AVLNode* n, void (*drop_elem)(void*));
-static
-void may_plain_drop_node(AVLNode* n);
-
 AVLTree AVLTree_new(size_t elem_size, int8_t (*compare)(const void*, const void*)) {
     return (AVLTree) {
         .root = NULL,
         .elem_size = elem_size,
         .cmp = compare
     };
+}
+
+void AVLTree_clear(AVLTree* avl) {
+    may_drop_node(avl->root);
+    avl->root = NULL;
+}
+
+void may_drop_node(AVLNode* n) {
+    if (n) {
+        AVLNode* l = n->left;
+        AVLNode* r = n->right;
+        free(n->elem);
+        free(n);
+        may_drop_node(l);
+        may_drop_node(r);
+    }
+}
+
+void AVLTree_clear_with(AVLTree* avl, void (*drop_elem)(void*)) {
+    may_drop_node_with(avl->root, drop_elem);
+    avl->root = NULL;
+}
+
+void may_drop_node_with(AVLNode* n, void (*drop_elem)(void*)) {
+    if (n) {
+        AVLNode* l = n->left;
+        AVLNode* r = n->right;
+        drop_elem((n)->elem);
+        free(n->elem);
+        free(n);
+        may_drop_node_with(l, drop_elem);
+        may_drop_node_with(r, drop_elem);
+    }
 }
 
 size_t AVLTree_height(const AVLTree* avl) {
@@ -241,37 +273,4 @@ AVLNode* remove_max(AVLTree* avl, AVLNode* n, void* e) {
     }
 
     return n;
-}
-
-void AVLTree_clear(AVLTree* avl, void (*drop_elem)(void*)) {
-    may_drop_node(avl->root, drop_elem);
-    avl->root = NULL;
-}
-
-void may_drop_node(AVLNode* n, void (*drop_elem)(void*)) {
-    if (n) {
-        AVLNode* l = n->left;
-        AVLNode* r = n->right;
-        drop_elem((n)->elem);
-        free(n->elem);
-        free(n);
-        may_drop_node(l, drop_elem);
-        may_drop_node(r, drop_elem);
-    }
-}
-
-void AVLTree_plain_clear(AVLTree* avl) {
-    may_plain_drop_node(avl->root);
-    avl->root = NULL;
-}
-
-void may_plain_drop_node(AVLNode* n) {
-    if (n) {
-        AVLNode* l = n->left;
-        AVLNode* r = n->right;
-        free(n->elem);
-        free(n);
-        may_plain_drop_node(l);
-        may_plain_drop_node(r);
-    }
 }

@@ -18,7 +18,7 @@ int main() {
 
     assert(Vec_is_empty(&v));
     assert(Vec_pop(&v, NULL) == false);
-    Vec_plain_drop(&v);
+    Vec_drop(&v);
 
     return EXIT_SUCCESS;
 }

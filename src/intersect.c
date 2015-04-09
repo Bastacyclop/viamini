@@ -60,7 +60,7 @@ int main() {
     Netlist_intersections_to_file(&intersections, intersection_path);
     intersections_display(&netlist, &intersections,
                           display_path, intersection_display_path);
-    Vec_plain_drop(&intersections);
+    Vec_drop(&intersections);
 
     Netlist_drop(&netlist);
 

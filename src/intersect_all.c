@@ -35,7 +35,7 @@ void handle(char* path) {
     Vec intersections = Netlist_intersections_avl_sweep(&netlist);
     Netlist_intersections_to_file(&intersections, intersection_path);
 
-    Vec_plain_drop(&intersections);
+    Vec_drop(&intersections);
     Netlist_drop(&netlist);
 
     free(intersection_path);
@@ -59,7 +59,7 @@ int main() {
         Vec_push(&threads, &thread);
     }
 
-    Vec_plain_drop(&paths);
+    Vec_drop(&paths);
 
     pthread_t thread;
     while (Vec_pop(&threads, &thread)) {
@@ -69,7 +69,7 @@ int main() {
         }
     }
 
-    Vec_plain_drop(&threads);
+    Vec_drop(&threads);
 
     return EXIT_SUCCESS;
 }

@@ -106,7 +106,7 @@ int main() {
     }
 
     assert(AVLTree_is_empty(&avl));
-    AVLTree_plain_clear(&avl);
+    AVLTree_clear(&avl);
 
     return EXIT_SUCCESS;
 }

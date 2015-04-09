@@ -18,6 +18,13 @@ typedef struct {
 /// No allocation is done at this call.
 BinaryHeap BinaryHeap_new(size_t elem_size, bool (*strict_order)(const void*, const void*));
 
+/// Releases the heap resources.
+void BinaryHeap_drop(BinaryHeap* bh);
+
+/// Releases the heap resources.
+/// Calls `drop_elem` on each element.
+void BinaryHeap_drop_with(BinaryHeap* bh, void (*drop_elem)(void*));
+
 /// Returns the number of elements in the heap.
 size_t BinaryHeap_len(const BinaryHeap* bh);
 
@@ -26,13 +33,6 @@ bool BinaryHeap_is_empty(const BinaryHeap* bh);
 
 /// Returns the capacity of the heap.
 size_t BinaryHeap_capacity(const BinaryHeap* bh);
-
-/// Releases the heap resources.
-/// Calls `drop_elem` on each element.
-void BinaryHeap_drop(BinaryHeap* bh, void (*drop_elem)(void*));
-
-/// Releases the heap resources.
-void BinaryHeap_plain_drop(BinaryHeap* bh);
 
 /// Pushes an element in the heap.
 /// The element is copied from `e`.
@@ -47,10 +47,10 @@ void BinaryHeap_push(BinaryHeap* bh, void* e);
 bool BinaryHeap_pop(BinaryHeap* bh, void* e);
 
 /// Clears the heap, removing all elements.
-/// Calls `drop_elem` on each removed element.
-void BinaryHeap_clear(BinaryHeap* bh, void (*drop_elem)(void*));
+void BinaryHeap_clear(BinaryHeap* bh);
 
 /// Clears the heap, removing all elements.
-void BinaryHeap_plain_clear(BinaryHeap* bh);
+/// Calls `drop_elem` on each removed element.
+void BinaryHeap_clear_with(BinaryHeap* bh, void (*drop_elem)(void*));
 
 #endif // BINARY_HEAP_H

@@ -29,6 +29,14 @@ BinaryHeap BinaryHeap_new(size_t elem_size, bool (*strict_order)(const void*, co
     };
 }
 
+void BinaryHeap_drop(BinaryHeap* bh) {
+    Vec_drop(&bh->vec);
+}
+
+void BinaryHeap_drop_with(BinaryHeap* bh, void (*drop_elem)(void*)) {
+    Vec_drop_with(&bh->vec, drop_elem);
+}
+
 size_t root_index() {
     return 0;
 }
@@ -55,14 +63,6 @@ bool BinaryHeap_is_empty(const BinaryHeap* bh) {
 
 size_t BinaryHeap_capacity(const BinaryHeap* bh) {
     return Vec_capacity(&bh->vec);
-}
-
-void BinaryHeap_drop(BinaryHeap* bh, void (*drop_elem)(void*)) {
-    Vec_drop(&bh->vec, drop_elem);
-}
-
-void BinaryHeap_plain_drop(BinaryHeap* bh) {
-    Vec_plain_drop(&bh->vec);
 }
 
 void BinaryHeap_push(BinaryHeap* bh, void* elem) {
@@ -146,10 +146,10 @@ size_t heap_get_mut_lower_child(BinaryHeap* bh, size_t i, void** e) {
     }
 }
 
-void BinaryHeap_clear(BinaryHeap* bh, void (*drop_elem)(void*)) {
-    Vec_clear(&bh->vec, drop_elem);
+void BinaryHeap_clear(BinaryHeap* bh) {
+    Vec_clear(&bh->vec);
 }
 
-void BinaryHeap_plain_clear(BinaryHeap* bh) {
-    Vec_plain_clear(&bh->vec);
+void BinaryHeap_clear_with(BinaryHeap* bh, void (*drop_elem)(void*)) {
+    Vec_clear_with(&bh->vec, drop_elem);
 }

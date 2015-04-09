@@ -7,23 +7,23 @@ List List_new(size_t elem_size) {
     return (List) { .head = NULL, .len = 0, .elem_size = elem_size };
 }
 
-size_t List_len(const List* l) {
-    return l->len;
+void List_clear(List* l) {
+    while (List_pop(l, NULL)) {}
 }
 
-bool List_is_empty(const List* l) {
-    return !l->head;
-}
-
-void List_clear(List* l, void (*drop_elem)(void*)) {
+void List_clear_with(List* l, void (*drop_elem)(void*)) {
     void* e = NULL;
     while (List_pop(l, e)) {
         drop_elem(e);
     }
 }
 
-void List_plain_clear(List* l) {
-    while (List_pop(l, NULL)) {}
+size_t List_len(const List* l) {
+    return l->len;
+}
+
+bool List_is_empty(const List* l) {
+    return !l->head;
 }
 
 void* List_peek(List* l) {

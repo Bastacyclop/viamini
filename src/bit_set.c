@@ -68,7 +68,7 @@ void block_clear(Block* b, size_t i) {
 }
 
 void BitSet_drop(BitSet* set) {
-    Vec_plain_drop(&set->storage);
+    Vec_drop(&set->storage);
 }
 
 size_t BitSet_len(const BitSet* set) {
@@ -162,6 +162,6 @@ bool BitSet_remove(BitSet* set, size_t value) {
 }
 
 void BitSet_clear(BitSet* set) {
-    Vec_plain_clear(&set->storage);
+    Vec_clear(&set->storage);
     set->nbits = 0;
 }

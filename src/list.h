@@ -21,18 +21,18 @@ typedef struct {
 /// No allocation is done.
 List List_new(size_t elem_size);
 
+/// Clears the list by removing all its elements.
+void List_clear(List* l);
+
+/// Clears the list by removing all its elements.
+/// `drop_elem` will be called on each element.
+void List_clear_with(List* l, void (*drop_elem)(void*));
+
 /// Returns the length of the list.
 size_t List_len(const List* l);
 
 /// Is the list empty ?
 bool List_is_empty(const List* l);
-
-/// Clears the list by removing all its elements.
-/// `drop_elem` will be called on each element.
-void List_clear(List* l, void (*drop_elem)(void*));
-
-/// Clears the list by removing all its elements.
-void List_plain_clear(List* l);
 
 /// Returns a pointer to the first element of the list.
 void* List_peek(List* l);

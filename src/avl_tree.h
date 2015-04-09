@@ -26,6 +26,13 @@ typedef struct {
 /// No allocation is done at this call.
 AVLTree AVLTree_new(size_t elem_size, int8_t (*compare)(const void*, const void*));
 
+/// Clears the tree, removing all elements.
+void AVLTree_clear(AVLTree* avl);
+
+/// Clears the tree, removing all elements.
+/// Calls `drop_elem` on each removed element.
+void AVLTree_clear_with(AVLTree* avl, void (*drop_elem)(void*));
+
 /// Returns the height of the tree (0 if the tree is empty).
 size_t AVLTree_height(const AVLTree* avl);
 
@@ -43,12 +50,5 @@ bool AVLTree_insert(AVLTree* avl, void* e);
 /// Returns `false` otherwise.
 /// The tree might be rebalanced.
 bool AVLTree_remove(AVLTree* avl, const void* e, void* removed);
-
-/// Clears the tree, removing all elements.
-/// Calls `drop_elem` on each removed element.
-void AVLTree_clear(AVLTree* avl, void (*drop_elem)(void*));
-
-/// Clears the tree, removing all elements.
-void AVLTree_plain_clear(AVLTree* avl);
 
 #endif // AVL_TREE_H

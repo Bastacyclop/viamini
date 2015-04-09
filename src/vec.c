@@ -27,16 +27,31 @@ Vec Vec_with_capacity(size_t capacity, size_t elem_size) {
     };
 }
 
+void Vec_drop(Vec* v) {
+    free(v->data);
+}
+
+void Vec_drop_with(Vec* v, void (*drop_elem)(void*)) {
+    drop_elems(v, drop_elem);
+    free(v->data);
+}
+
+void drop_elems(Vec* v, void (*drop_elem)(void*)) {
+    for (uint32_t i = 0; i < v->len; i++) {
+        (*drop_elem)(Vec_unsafe_get_mut(v, i));
+    }
+}
+
+bool Vec_is_empty(const Vec* v) {
+    return Vec_len(v) == 0;
+}
+
 size_t Vec_len(const Vec* v) {
     return v->len;
 }
 
 size_t Vec_capacity(const Vec* v) {
     return v->cap;
-}
-
-bool Vec_is_empty(const Vec* v) {
-    return Vec_len(v) == 0;
 }
 
 void* Vec_unsafe_get_mut(Vec* v, size_t i) {
@@ -64,21 +79,6 @@ void assert_bound(const Vec* v, size_t i) {
     if (i > v->len) {
         perror("Vec index out of bounds");
         exit(1);
-    }
-}
-
-void Vec_drop(Vec* v, void (*drop_elem)(void*)) {
-    drop_elems(v, drop_elem);
-    free(v->data);
-}
-
-void Vec_plain_drop(Vec* v) {
-    free(v->data);
-}
-
-void drop_elems(Vec* v, void (*drop_elem)(void*)) {
-    for (uint32_t i = 0; i < v->len; i++) {
-        (*drop_elem)(Vec_unsafe_get_mut(v, i));
     }
 }
 
@@ -113,12 +113,12 @@ bool Vec_pop(Vec* v, void* e) {
     return true;
 }
 
-void Vec_clear(Vec* v, void (*drop_elem)(void*)) {
-    drop_elems(v, drop_elem);
+void Vec_clear(Vec* v) {
     v->len = 0;
 }
 
-void Vec_plain_clear(Vec* v) {
+void Vec_clear_with(Vec* v, void (*drop_elem)(void*)) {
+    drop_elems(v, drop_elem);
     v->len = 0;
 }
 

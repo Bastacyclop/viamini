@@ -49,25 +49,25 @@ int main() {
             Vec intersections = Netlist_intersections_naive(&netlist);
         )
         uint32_t naive_time = (uint32_t)delta_time;
-        Vec_plain_drop(&intersections);
+        Vec_drop(&intersections);
 
         measure_exec_time("   intersections vec sweep",
             Vec intersections2 = Netlist_intersections_vec_sweep(&netlist);
         )
         uint32_t vec_sweep_time = (uint32_t)delta_time;
-        Vec_plain_drop(&intersections2);
+        Vec_drop(&intersections2);
 
         measure_exec_time("   intersections list sweep",
             Vec intersections3 = Netlist_intersections_list_sweep(&netlist);
         )
         uint32_t list_sweep_time = (uint32_t)delta_time;
-        Vec_plain_drop(&intersections3);
+        Vec_drop(&intersections3);
 
         measure_exec_time("   intersections avl sweep",
             Vec intersections4 = Netlist_intersections_avl_sweep(&netlist);
         )
         uint32_t avl_sweep_time = (uint32_t)delta_time;
-        Vec_plain_drop(&intersections4);
+        Vec_drop(&intersections4);
 
         Netlist_drop(&netlist);
 
@@ -80,7 +80,7 @@ int main() {
     fputs("0 0 0 0 0\n", bench_data); // placeholder
     fclose(bench_data);
 
-    Vec_plain_drop(&paths);
+    Vec_drop(&paths);
 
     return EXIT_SUCCESS;
 }
