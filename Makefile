@@ -19,7 +19,7 @@ else
 		  -fno-omit-frame-pointer -Winline -fstrict-aliasing
 endif
 
-all: $(BLDDIR)/intersect $(BLDDIR)/intersect_all
+all: $(BLDDIR)/intersect $(BLDDIR)/intersect_all $(BLDDIR)/solve
 
 $(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
 	@echo "Compiling $< into $@"
@@ -59,6 +59,9 @@ $(BLDDIR)/intersect_all: $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST
 $(BLDDIR)/bench: $(SRCDIR)/bench.c $(NETLIST_DEP) builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(NETLIST_DEP) -o $(BLDDIR)/bench
 	
+$(BLDDIR)/solve: $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/solve
+
 $(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
 	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec
 

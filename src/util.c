@@ -35,11 +35,23 @@ void ask_str(const char* msg, char* s, size_t max_len) {
 
 char* str_clone(const char* s) {
     size_t len = strlen(s);
-    // +1 pour '\0'
-    char* clone = malloc((len + 1)*sizeof(char));
+    char* clone = malloc((len + 1)*sizeof(char)); // + 1 for '\0'
     assert_alloc(clone);
     memcpy(clone, s, (len + 1));
     return clone;
+}
+
+char* str_surround(const char* prefix, const char* s, const char* suffix) {
+    size_t pre_len = strlen(prefix);
+    size_t s_len = strlen(s);
+    size_t suf_len = strlen(suffix);
+
+    char* res = malloc(pre_len + s_len + suf_len + 1); // + 1 for '\0'
+    memcpy(res, prefix, pre_len);
+    memcpy(res + pre_len, s, s_len);
+    memcpy(res + pre_len + s_len, suffix, suf_len + 1);
+
+    return res;
 }
 
 void mem_swap(void* a, void* b, size_t n) {

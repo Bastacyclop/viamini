@@ -7,15 +7,7 @@
 int main() {
     char file[255];
     ask_str("enter the netlist file name: ", file, 255);
-    size_t file_len = strlen(file);
-    const char* prefix = "netlists/";
-    const char* suffix = ".net";
-    const size_t prefix_len = strlen(prefix);
-    const size_t suffix_len = strlen(suffix);
-    char* path = malloc(prefix_len + file_len + suffix_len + 1);
-    memcpy(path, prefix, prefix_len);
-    memcpy(path + prefix_len, file, file_len);
-    memcpy(path + prefix_len + file_len, suffix, suffix_len + 1);
+    char* path = str_surround("netlists/", file, ".net");
 
     char method[20];
     ask_str("choose a method (naive/vec_sweep/list_sweep/avl_sweep): ", method, 20);

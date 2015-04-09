@@ -29,24 +29,16 @@ Vec find_netlists() {
 void handle(char* path) {
     printf("handling `%s`.\n", path);
 
-    char* display_path = change_extension(path, "svg");
     char* intersection_path = change_extension(path, "int");
-    char* intersection_display_path = change_extension(path, "int.svg");
 
     Netlist netlist = Netlist_from_file(path);
-    Netlist_to_svg(&netlist, display_path);
-
     Vec intersections = Netlist_intersections_avl_sweep(&netlist);
     Netlist_intersections_to_file(&intersections, intersection_path);
-    Netlist_intersections_to_svg(&netlist, &intersections,
-                                 display_path, intersection_display_path);
-    Vec_plain_drop(&intersections);
 
+    Vec_plain_drop(&intersections);
     Netlist_drop(&netlist);
 
-    free(intersection_display_path);
     free(intersection_path);
-    free(display_path);
 
     printf("`%s` "TERM_GREEN("✓")"\n", path);
     free(path);

@@ -22,6 +22,7 @@ int main() {
 
     for (size_t i = 0; i < 80; i += 5) {
         assert(BitSet_contains(&set, i));
+        assert(!BitSet_contains(&set, i + 1));
     }
 
     for (size_t i = 0; i < 80; i += 10) {

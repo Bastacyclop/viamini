@@ -29,6 +29,9 @@ void ask_str(const char* msg, char* s, size_t max_len);
 /// Clones the given string, allocating the necessary memory.
 char* str_clone(const char* s);
 
+/// Surrounds the given string with the given prefix and suffix.
+char* str_surround(const char* prefix, const char* s, const char* suffix);
+
 /// Swaps the given values using a temporary stack variable.
 void mem_swap(void* a, void* b, size_t n);
 

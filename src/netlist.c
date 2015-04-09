@@ -91,6 +91,32 @@ void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
 static
 void graph_node_drop(GraphNode* n);
 
+typedef enum {
+    UNVISITED_NODE,
+    A_OPENED_NODE,
+    B_OPENED_NODE,
+    CLOSED_NODE
+} NodeMark;
+
+static
+Vec Graph_find_odd_cycle(const Graph* g, Vec* marks);
+static
+Vec new_marks(size_t node_count);
+static
+void add_via_with_cycle(BitSet* solution, const Vec* cycle, const Graph* g);
+static
+void reset_marks(Vec* marks, const BitSet* solution, const Graph* g);
+static
+bool Graph_find_odd_cycle_from(const Graph* g, size_t root, Vec* rev_path,
+                               Vec* marks, NodeMark mark);
+static
+Vec rev_path_into_cycle_nodes(Vec rev_path);
+static
+void Graph_solve_faces(const Graph* g, BitSet* solution);
+static
+void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
+                            BitSet* visited, bool face);
+
 #define SYNTAX_ERROR(desc) {                        \
     perror("circuit file syntax error: "desc"\n");  \
     exit(1);                                        \
@@ -704,8 +730,7 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
     size_t nodes_count = 0;
 
     size_t net_count = Vec_len(&nl->nets);
-    Vec net_offsets = Vec_with_capacity(sizeof(size_t),
-                                        net_count);
+    Vec net_offsets = Vec_with_capacity(net_count, sizeof(size_t));
     for (size_t n = 0; n < net_count; n++) {
         const Net* net = Vec_get(&nl->nets, n);
         Vec_push(&net_offsets, &nodes_count);
@@ -714,8 +739,7 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
         nodes_count += Vec_len(&net->segments);
     }
 
-    GraphNodeVec nodes = Vec_with_capacity(sizeof(GraphNode),
-                                           nodes_count);
+    GraphNodeVec nodes = Vec_with_capacity(nodes_count, sizeof(GraphNode));
 
     for (size_t n = 0; n < net_count; n++) {
         size_t net_offset = Vec_len(&nodes);
@@ -789,11 +813,21 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
     };
 }
 
+void Graph_drop(Graph* g) {
+    Vec_drop(&g->nodes, (void (*)(void*))graph_node_drop);
+    Vec_plain_drop(&g->net_offsets);
+}
+
+void graph_node_drop(GraphNode* n) {
+    Vec_plain_drop(&n->continuity);
+    Vec_plain_drop(&n->conflict);
+}
+
 BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
     // point: false -> no via
-    // point: true -> via
+    //        true -> via
     // segment: false -> face A
-    // segment: true -> face B
+    //          true -> face B
     BitSet solution = BitSet_with_capacity(Vec_len(&g->nodes));
 
     size_t offset = 0;
@@ -844,12 +878,175 @@ BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
     return solution;
 }
 
-void Graph_drop(Graph* g) {
-    Vec_drop(&g->nodes, (void (*)(void*))graph_node_drop);
-    Vec_plain_drop(&g->net_offsets);
+BitSet Graph_odd_cycle_solve(const Graph* g) {
+    size_t node_count = Vec_len(&g->nodes);
+    BitSet solution = BitSet_with_capacity(node_count);
+
+    Vec marks = new_marks(node_count);
+
+    Vec cycle = Graph_find_odd_cycle(g, &marks);
+    while (!Vec_is_empty(&cycle)) {
+        add_via_with_cycle(&solution, &cycle, g);
+        Vec_plain_drop(&cycle);
+
+        reset_marks(&marks, &solution, g);
+        cycle = Graph_find_odd_cycle(g, &marks);
+    }
+    Vec_plain_drop(&cycle);
+
+    Vec_plain_drop(&marks);
+
+    Graph_solve_faces(g, &solution);
+
+    return solution;
 }
 
-void graph_node_drop(GraphNode* n) {
-    Vec_plain_drop(&n->continuity);
-    Vec_plain_drop(&n->conflict);
+Vec new_marks(size_t node_count) {
+    Vec marks = Vec_with_capacity(node_count, sizeof(NodeMark));
+    NodeMark u = UNVISITED_NODE;
+    for (size_t n = 0; n < node_count; n++) {
+        Vec_push(&marks, &u);
+    }
+    return marks;
+}
+
+void add_via_with_cycle(BitSet* solution, const Vec* cycle, const Graph* g) {
+    size_t len = Vec_len(cycle);
+    for (size_t i = 0; i < len; i++) {
+        size_t c = *(const size_t*)Vec_get(cycle, i);
+        const GraphNode* node = Vec_get(&g->nodes, c);
+        if (node->type == POINT_NODE) {
+            assert(BitSet_insert(solution, c));
+            return;
+        }
+    }
+    assert(false);
+}
+
+void reset_marks(Vec* marks, const BitSet* solution, const Graph* g) {
+    size_t len = Vec_len(marks);
+    for (size_t n = 0; n < len; n++) {
+        const GraphNode* node = Vec_get(&g->nodes, n);
+        NodeMark* m = Vec_get_mut(marks, n);
+        if (node->type == POINT_NODE && BitSet_contains(solution, n)) {
+            *m = CLOSED_NODE;
+        } else {
+            *m = UNVISITED_NODE;
+        }
+    }
+}
+
+Vec Graph_find_odd_cycle(const Graph* g, Vec* marks) {
+    size_t node_count = Vec_len(&g->nodes);
+    Vec rev_path = Vec_new(sizeof(size_t));
+
+    for (size_t n = 0; n < node_count; n++) {
+        NodeMark m = *(const NodeMark*)Vec_get(marks, n);
+        if (m == UNVISITED_NODE &&
+            Graph_find_odd_cycle_from(g, n, &rev_path, marks, A_OPENED_NODE)) {
+
+            return rev_path_into_cycle_nodes(rev_path);
+        }
+    }
+
+    return rev_path;
+}
+
+Vec rev_path_into_cycle_nodes(Vec rev_path) {
+    size_t c_0 = *(const size_t*)Vec_get(&rev_path, 0);
+    size_t len = Vec_len(&rev_path);
+    size_t i;
+    for (i = 1; i < len; i++) {
+        size_t c_i = *(const size_t*)Vec_get(&rev_path, i);
+        if (c_i == c_0) break;
+    }
+    while (Vec_len(&rev_path) > i) {
+        Vec_pop(&rev_path, NULL);
+    }
+    return rev_path;
+}
+
+bool Graph_find_odd_cycle_from(const Graph* g, size_t root, Vec* path,
+                               Vec* marks, NodeMark mark) {
+    bool found = false;
+
+    NodeMark* m = Vec_get_mut(marks, root);
+    *m = mark;
+
+    const GraphNode* n = Vec_get(&g->nodes, root);
+    size_t conflict_count = Vec_len(&n->conflict);
+    size_t continuity_count = Vec_len(&n->continuity);
+    for (size_t c = 0; c < (conflict_count + continuity_count); c++) {
+        const GraphEdge* e;
+        if (c < conflict_count)
+            e = Vec_get(&n->conflict, c);
+        else e = Vec_get(&n->continuity, c - conflict_count);
+        size_t v = e->v;
+
+        NodeMark v_mark = *(const NodeMark*)Vec_get(marks, v);
+        if (v_mark == UNVISITED_NODE) {
+            if (mark == A_OPENED_NODE)
+                v_mark = B_OPENED_NODE;
+            else v_mark = A_OPENED_NODE;
+            if (Graph_find_odd_cycle_from(g, v, path, marks, v_mark)) {
+                found = true;
+                Vec_push(path, &root);
+                break;
+            }
+        } else if (v_mark == mark) {
+            found = true;
+            Vec_push(path, &v);
+            Vec_push(path, &root);
+            break;
+        }
+    }
+
+    return found;
+}
+
+void Graph_solve_faces(const Graph* g, BitSet* solution) {
+    size_t node_count = Vec_len(&g->nodes);
+    BitSet visited = BitSet_with_capacity(node_count);
+
+    for (size_t n = 0; n < node_count; n++) {
+        if (!BitSet_contains(&visited, n)) {
+            Graph_solve_faces_from(g, n, solution, &visited, false);
+        }
+    }
+
+    BitSet_drop(&visited);
+}
+
+void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
+                            BitSet* visited, bool face) {
+    BitSet_insert(visited, root);
+
+    const GraphNode* n = Vec_get(&g->nodes, root);
+    if (n->type == SEGMENT_NODE) {
+        if (face) BitSet_insert(solution, root);
+    } else {
+        if (BitSet_contains(solution, root)) return;
+    }
+
+    size_t conflict_count = Vec_len(&n->conflict);
+    for (size_t c = 0; c < conflict_count; c++) {
+        const GraphEdge* e = Vec_get(&n->conflict, c);
+        size_t v = e->v;
+
+        if (!BitSet_contains(visited, v)) {
+            Graph_solve_faces_from(g, v, solution, visited, !face);
+        } else {
+            assert(BitSet_contains(solution, v) != face);
+        }
+    }
+
+    size_t continuity_count = Vec_len(&n->continuity);
+    for (size_t c = 0; c < continuity_count; c++) {
+        const GraphEdge* e = Vec_get(&n->continuity, c);
+        size_t v = e->v;
+
+        if (!BitSet_contains(visited, v)) {
+            Graph_solve_faces_from(g, v, solution, visited, face);
+        }
+    }
 }

@@ -103,9 +103,14 @@ typedef struct {
 /// Creates the graph associated to the netlist and its intersections.
 Graph Graph_new(const Netlist* nl, const char* int_path);
 
-BitSet Graph_hv_solve(const Graph* g, const Netlist* nl);
-
 /// Releases the graph resources.
 void Graph_drop(Graph* g);
+
+/// Solves the problem by putting every horizontal segments on a face
+///                           and -----  vertical  ----------- the other.
+BitSet Graph_hv_solve(const Graph* g, const Netlist* nl);
+
+/// Solves the problem by finding odd cycles.
+BitSet Graph_odd_cycle_solve(const Graph* g);
 
 #endif // CIRCUIT_H
