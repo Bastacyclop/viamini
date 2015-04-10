@@ -1,10 +1,9 @@
 #include <time.h>
 
+#include "util.h"
 #include "netlist.h"
 
 /// Compares the different intersection finding methods.
-
-Vec find_netlists(void);
 
 #define measure_exec_time(msg, block)                                   \
     time_mark = clock();                                                \
@@ -13,26 +12,8 @@ Vec find_netlists(void);
     delta_sec = ((double)(delta_time))/CLOCKS_PER_SEC;                  \
     printf(msg": %f s - %d clocks\n", delta_sec, (int)delta_time);
 
-Vec find_netlists() {
-    system("find netlists/*.net > netlists.tmp");
-    FILE* f = fopen("netlists.tmp", "r");
-
-    Vec files = Vec_new(sizeof(char*));
-    char line[255];
-    while (fgets(line, 255, f)) {
-        cut_at_newline(line);
-        char* l = str_clone(line);
-        Vec_push(&files, &l);
-    }
-
-    fclose(f);
-    system("rm netlists.tmp");
-
-    return files;
-}
-
 int main() {
-    Vec paths = find_netlists();
+    Vec paths = find("-S netlists/*.net");
 
     clock_t time_mark, delta_time;
     double delta_sec;

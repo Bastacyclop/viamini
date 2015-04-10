@@ -1,7 +1,6 @@
 #include <math.h>
 
 #include "display.h"
-#include "bit_set.h"
 
 const Color BLACK = {   0,   0,   0 };
 const Color WHITE = { 255, 255, 255 };
@@ -26,22 +25,14 @@ void ps_draw_point(FILE* f, Point p, const Transform* t);
 static
 void ps_draw_intersection(FILE* f, Point p, const Transform* t);
 static
-Transform compute_ps_transform(const AABB* aabb);
+void ps_draw_hidden_line(FILE* f, Point a, Point b, const Transform* t);
+static
+void ps_init_text(FILE* f);
+static
+void ps_draw_text(FILE*f, const char* text, int x, int y);
 
 static
-void svg_begin_color(FILE* f, Color c);
-static
-void svg_end_color(FILE* f);
-static
-void svg_draw_line(FILE* f, Point a, Point b, const Transform* t);
-static
-void svg_draw_point(FILE* f, Point p, const Transform* t);
-static
-void svg_draw_intersection(FILE* f, Point p, const Transform* t);
-static
-void svg_draw_hidden_line(FILE* f, Point a, Point b, const Transform* t);
-static
-Transform compute_svg_transform(const AABB* aabb);
+Transform compute_ps_transform(const AABB* aabb);
 
 static
 Point middle_of(const Point* a, const Point* b);
@@ -56,6 +47,12 @@ ColorSet ColorSet_new(size_t size) {
     };
 }
 
+Color ColorSet_pop(ColorSet* cs) {
+    Color c = cs->next;
+    ColorSet_step(cs);
+    return c;
+}
+
 void ColorSet_step(ColorSet* cs) {
     uint8_t step = cs->step;
     cs->next.b += step;
@@ -65,12 +62,6 @@ void ColorSet_step(ColorSet* cs) {
             cs->next.r += step;
         }
     }
-}
-
-Color ColorSet_pop(ColorSet* cs) {
-    Color c = cs->next;
-    ColorSet_step(cs);
-    return c;
 }
 
 void Netlist_to_ps(const Netlist* nl, const char* path) {
@@ -142,14 +133,36 @@ void ps_draw_intersection(FILE* f, Point p, const Transform* t) {
 #undef x_trans
 #undef y_trans
 
+void ps_draw_hidden_line(FILE* f, Point a, Point b, const Transform* t) {
+    fprintf(f, "save\n");
+    fprintf(f, "[5 5] 0 setdash\n");
+    ps_draw_line(f, a, b, t);
+    fprintf(f, "restore\n");
+}
+
+void ps_init_text(FILE* f) {
+    fputs("/Times-Roman findfont\n"
+          "20 scalefont\n"
+          "setfont\n", f);
+}
+
+void ps_draw_text(FILE* f, const char* text, int x, int y) {
+    fputs("newpath\n", f);
+    fprintf(f, "%d %d moveto\n", x, y);
+    fprintf(f, "(%s) show\n", text);
+}
+
+
 Transform compute_ps_transform(const AABB* aabb) {
+    float scale_w = 600. / (float)(aabb->sup.x - aabb->inf.x);
+    float scale_h = 600. / (float)(aabb->sup.y - aabb->inf.y);
     return (Transform) {
         .translate = { -aabb->inf.x, -aabb->inf.y },
-        .scale = 600. / (float)(aabb->sup.x - aabb->inf.x)
+        .scale = float_min(scale_w, scale_h)
     };
 }
 
-void Netlist_intersections_to_ps(const Netlist* nl, const Vec* intersections,
+void Netlist_intersections_to_ps(const Vec* intersections, const Netlist* nl,
                                  const char* base_path, const char* file_path) {
     FILE* base = fopen(base_path, "r");
     if (!base) {
@@ -172,156 +185,38 @@ void Netlist_intersections_to_ps(const Netlist* nl, const Vec* intersections,
     Transform trans = compute_ps_transform(&nl->aabb);
     ps_set_color(f, RED);
 
-    for (size_t i = 0; i < Vec_len(intersections); i++) {
+    size_t intersection_count = Vec_len(intersections);
+    for (size_t i = 0; i < intersection_count; i++) {
         const Intersection* intersection = Vec_get(intersections, i);
         ps_draw_intersection(f, intersection->sect, &trans);
     }
 
+    ps_init_text(f);
+    char text[100];
+    snprintf(text, 100, "%zu intersections", intersection_count);
+    ps_draw_text(f, text, 20, 595);
+
     fclose(f);
 }
 
-void Netlist_to_svg(const Netlist* nl, const char* path) {
+void Graph_to_ps(const Graph* g, const Netlist* nl, const char* path) {
     FILE* f = fopen(path, "w");
-    if (!f) {
-        perror("cannot open svg file");
-        exit(1);
-    }
-
-    fputs("<svg version=\"1.2\" baseProfile=\"tiny\""
-          " xmlns=\"http://www.w3.org/2000/svg\">\n", f);
 
     size_t net_count = Vec_len(&nl->nets);
     ColorSet colors = ColorSet_new(net_count);
-    Transform trans = compute_svg_transform(&nl->aabb);
+    Transform trans = compute_ps_transform(&nl->aabb);
 
-    for (size_t i = 0; i < net_count; i++) {
-        const Net* net = Vec_get(&nl->nets, i);
-        size_t point_count = Vec_len(&net->points);
-        size_t segment_count = Vec_len(&net->segments);
-
-        svg_begin_color(f, ColorSet_pop(&colors));
-
-        for (size_t s = 0; s < segment_count; s++) {
-            const Segment* segment = Vec_get(&net->segments, s);
-            const Point* beg = Vec_get(&net->points, segment->beg);
-            const Point* end = Vec_get(&net->points, segment->end);
-            svg_draw_line(f, *beg, *end, &trans);
-        }
-
-        for (size_t p = 0; p < point_count; p++) {
-            const Point* point = Vec_get(&net->points, p);
-            svg_draw_point(f, *point, &trans);
-        }
-
-        svg_end_color(f);
-    }
-
-    fclose(f);
-}
-
-void svg_begin_color(FILE* f, Color c) {
-    fprintf(f, "<g stroke=\"rgb(%u, %u, %u)\" fill=\"rgb(%u, %u, %u)\" >\n",
-                            c.r, c.g, c.b,           c.r, c.g, c.b);
-}
-
-void svg_end_color(FILE* f) {
-    fputs("</g>\n", f);
-}
-
-#define x_trans(X) (t->scale*(float)(X+t->translate.x))
-#define y_trans(Y) (t->scale*(float)(Y+t->translate.y))
-
-void svg_draw_line(FILE* f, Point a, Point b, const Transform* t) {
-    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
-            x_trans(a.x), y_trans(a.y), x_trans(b.x), y_trans(b.y));
-}
-
-void svg_draw_point(FILE* f, Point p, const Transform* t) {
-    fprintf(f, "<circle cx=\"%f\" cy=\"%f\" r=\"1.\" />\n",
-            x_trans(p.x), y_trans(p.y));
-}
-
-void svg_draw_intersection(FILE* f, Point p, const Transform* t) {
-    float x = x_trans(p.x);
-    float y = y_trans(p.y);
-    float r = 1.5;
-    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
-                         x - r,   y - r,   x + r,   y + r);
-    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\" />\n",
-                         x - r,   y + r,   x + r,   y - r);
-}
-
-void svg_draw_hidden_line(FILE* f, Point a, Point b, const Transform* t) {
-    fprintf(f, "<line x1=\"%f\" y1=\"%f\" x2=\"%f\" y2=\"%f\""
-               " style=\"stroke-dasharray: 5, 5\"/>\n",
-            x_trans(a.x), y_trans(a.y), x_trans(b.x), y_trans(b.y));
-}
-
-#undef x_trans
-#undef y_trans
-
-Transform compute_svg_transform(const AABB* aabb) {
-    float scale_w = 600. / (float)(aabb->sup.x - aabb->inf.x);
-    float scale_h = 600. / (float)(aabb->sup.y - aabb->inf.y);
-    return (Transform) {
-        .translate = { -aabb->inf.x, -aabb->inf.y },
-        .scale = float_max(scale_w, scale_h)
-    };
-}
-
-void Netlist_intersections_to_svg(const Netlist* nl, const Vec* intersections,
-                                  const char* base_path, const char* file_path) {
-    FILE* base = fopen(base_path, "r");
-    if (!base) {
-        perror("cannot open base svg file");
-        exit(1);
-    }
-    FILE* f = fopen(file_path, "w");
-    if (!f) {
-        perror("cannot open svg file");
-        exit(1);
-    }
-
-    char line[255];
-    while (fgets(line, 255, base)) {
-        fputs(line, f);
-    }
-
-    fclose(base);
-
-    Transform trans = compute_svg_transform(&nl->aabb);
-    svg_begin_color(f, BLACK);
-
-    for (size_t i = 0; i < Vec_len(intersections); i++) {
-        const Intersection* intersection = Vec_get(intersections, i);
-        svg_draw_intersection(f, intersection->sect, &trans);
-    }
-
-    svg_end_color(f);
-
-    fclose(f);
-}
-
-void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path) {
-    FILE* f = fopen(path, "w");
-
-    fputs("<svg version=\"1.2\" baseProfile=\"tiny\""
-          " xmlns=\"http://www.w3.org/2000/svg\">\n", f);
-
-    Transform trans = compute_svg_transform(&nl->aabb);
-    size_t net_count = Vec_len(&nl->nets);
-    ColorSet colors = ColorSet_new(net_count);
     size_t offset = 0;
     for (size_t n = 0; n < net_count; n++) {
         const Net* net = Vec_get(&nl->nets, n);
         size_t point_count = Vec_len(&net->points);
         size_t segment_count = Vec_len(&net->segments);
 
-        svg_begin_color(f, ColorSet_pop(&colors));
+        ps_set_color(f, ColorSet_pop(&colors));
 
         for (size_t i = offset; i < (offset + point_count); i++) {
             const GraphNode* node = Vec_get(&g->nodes, i);
-            svg_draw_point(f, *node->point, &trans);
+            ps_draw_point(f, *node->point, &trans);
 
             size_t continuity_count = Vec_len(&node->continuity);
             for (size_t c = 0; c < continuity_count; c++) {
@@ -329,7 +224,7 @@ void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path) {
                 const GraphNode* continuity = Vec_get(&g->nodes, edge->v);
                 const Point* c_beg = Vec_get(&net->points, continuity->segment->beg);
                 const Point* c_end = Vec_get(&net->points, continuity->segment->end);
-                svg_draw_line(f, *node->point, middle_of(c_beg, c_end), &trans);
+                ps_draw_line(f, *node->point, middle_of(c_beg, c_end), &trans);
             }
         }
         offset += point_count;
@@ -339,14 +234,12 @@ void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path) {
             const Point* beg = Vec_get(&net->points, node->segment->beg);
             const Point* end = Vec_get(&net->points, node->segment->end);
             Point mid = middle_of(beg, end);
-            svg_draw_point(f, mid, &trans);
+            ps_draw_point(f, mid, &trans);
         }
         offset += segment_count;
-
-        svg_end_color(f);
     }
 
-    svg_begin_color(f, BLACK);
+    ps_set_color(f, BLACK);
 
     offset = 0;
     for (size_t n = 0; n < net_count; n++) {
@@ -378,13 +271,11 @@ void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path) {
                                              conflict->segment->beg);
                 const Point* c_end = Vec_get(&c_net->points,
                                              conflict->segment->end);
-                svg_draw_line(f, mid, middle_of(c_beg, c_end), &trans);
+                ps_draw_line(f, mid, middle_of(c_beg, c_end), &trans);
             }
         }
         offset += segment_count;
     }
-
-    svg_end_color(f);
 
     fclose(f);
 }
@@ -396,27 +287,25 @@ Point middle_of(const Point* a, const Point* b) {
     };
 }
 
-void Solution_to_svg(const BitSet* sol, const Graph* g,
-                     const Netlist* nl, const char* path) {
+void Solution_to_ps(const BitSet* sol, const Graph* g,
+                    const Netlist* nl, const char* path) {
     FILE* f = fopen(path, "w");
 
-    fputs("<svg version=\"1.2\" baseProfile=\"tiny\""
-          " xmlns=\"http://www.w3.org/2000/svg\">\n", f);
-
-    Transform trans = compute_svg_transform(&nl->aabb);
     size_t net_count = Vec_len(&nl->nets);
     ColorSet colors = ColorSet_new(net_count);
+    Transform trans = compute_ps_transform(&nl->aabb);
+
     size_t offset = 0;
     for (size_t n = 0; n < net_count; n++) {
         const Net* net = Vec_get(&nl->nets, n);
         size_t point_count = Vec_len(&net->points);
         size_t segment_count = Vec_len(&net->segments);
 
-        svg_begin_color(f, ColorSet_pop(&colors));
+        ps_set_color(f, ColorSet_pop(&colors));
 
         for (size_t i = offset; i < (offset + point_count); i++) {
             const GraphNode* node = Vec_get(&g->nodes, i);
-            svg_draw_point(f, *node->point, &trans);
+            ps_draw_point(f, *node->point, &trans);
 
             size_t continuity_count = Vec_len(&node->continuity);
             for (size_t c = 0; c < continuity_count; c++) {
@@ -425,10 +314,10 @@ void Solution_to_svg(const BitSet* sol, const Graph* g,
                 const Point* c_beg = Vec_get(&net->points, continuity->segment->beg);
                 const Point* c_end = Vec_get(&net->points, continuity->segment->end);
                 if (BitSet_contains(sol, edge->v)) {
-                    svg_draw_hidden_line(f, *node->point, middle_of(c_beg, c_end),
-                                         &trans);
+                    ps_draw_hidden_line(f, *node->point, middle_of(c_beg, c_end),
+                                        &trans);
                 } else {
-                    svg_draw_line(f, *node->point, middle_of(c_beg, c_end), &trans);
+                    ps_draw_line(f, *node->point, middle_of(c_beg, c_end), &trans);
                 }
             }
         }
@@ -438,14 +327,12 @@ void Solution_to_svg(const BitSet* sol, const Graph* g,
             const GraphNode* node = Vec_get(&g->nodes, i);
             const Point* beg = Vec_get(&net->points, node->segment->beg);
             const Point* end = Vec_get(&net->points, node->segment->end);
-            svg_draw_point(f, middle_of(beg, end), &trans);
+            ps_draw_point(f, middle_of(beg, end), &trans);
         }
         offset += segment_count;
-
-        svg_end_color(f);
     }
 
-    svg_begin_color(f, BLACK);
+    ps_set_color(f, BLACK);
 
     size_t via_count = 0;
 
@@ -458,17 +345,17 @@ void Solution_to_svg(const BitSet* sol, const Graph* g,
         for (size_t i = offset; i < (offset + point_count); i++) {
             if (BitSet_contains(sol, i)) {
                 const GraphNode* node = Vec_get(&g->nodes, i);
-                svg_draw_point(f, *node->point, &trans);
+                ps_draw_point(f, *node->point, &trans);
                 via_count++;
             }
         }
         offset += point_count + segment_count;
     }
 
-    fprintf(f, "<text x=\"0\" y=\"0\" fill=\"black\">(%zu vias)</text>", via_count);
-
-    svg_end_color(f);
+    ps_init_text(f);
+    char text[100];
+    snprintf(text, 100, "%zu vias", via_count);
+    ps_draw_text(f, text, 20, 595);
 
     fclose(f);
 }
-

@@ -48,7 +48,7 @@ bench: $(BLDDIR)/bench
 	gnuplot < plot_cmds
 	@echo "[33m---------------------------------------------[0m"
 
-NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/bit_set.o $(BLDDIR)/util.o
+NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/bit_set.o $(BLDDIR)/util.o $(BLDDIR)/core.o
 
 $(BLDDIR)/intersect: $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/intersect
@@ -62,20 +62,20 @@ $(BLDDIR)/bench: $(SRCDIR)/bench.c $(NETLIST_DEP) builddir
 $(BLDDIR)/solve: $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/solve
 
-$(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/vec
+$(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/vec
 
-$(BLDDIR)/tests/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/util.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/bit_set
+$(BLDDIR)/tests/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/bit_set
 
-$(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/binary_heap
+$(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/binary_heap
 
-$(BLDDIR)/tests/avl_tree: $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/avl_tree
+$(BLDDIR)/tests/avl_tree: $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/avl_tree
 
-$(BLDDIR)/tests/list: $(TSTDIR)/list.c $(BLDDIR)/list.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/util.o -o $(BLDDIR)/tests/list
+$(BLDDIR)/tests/list: $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o testdir
+	$(CC) $(CFLAGS) $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/list
 
 builddir:
 	@mkdir -p $(BLDDIR)

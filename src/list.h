@@ -1,7 +1,7 @@
 #ifndef LIST_H
 #define LIST_H
 
-#include "util.h"
+#include "core.h"
 
 // A simply linked list.
 

@@ -1,7 +1,7 @@
 #ifndef VEC_H
 #define VEC_H
 
-#include "util.h"
+#include "core.h"
 
 /// A dynamically sized array.
 

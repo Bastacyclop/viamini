@@ -1,3 +1,4 @@
+#include "util.h"
 #include "netlist.h"
 #include "display.h"
 
@@ -26,40 +27,20 @@ int main() {
         exit(1);
     }
 
-    char format[4];
-    ask_str("choose an output format (ps/svg): ", format, 4);
-
     char* intersection_path = change_extension(path, "int");
-    char* display_path;
-    char* intersection_display_path;
-
-    void (*netlist_display)(const Netlist*, const char*);
-    void (*intersections_display)(const Netlist*, const Vec*, const char*, const char*);
-    if (strcmp(format, "ps") == 0) {
-        display_path = change_extension(path, "ps");
-        intersection_display_path = change_extension(path, "int.ps");
-        netlist_display = Netlist_to_ps;
-        intersections_display = Netlist_intersections_to_ps;
-    } else if (strcmp(format, "svg") == 0){
-        display_path = change_extension(path, "svg");
-        intersection_display_path = change_extension(path, "int.svg");
-        netlist_display = Netlist_to_svg;
-        intersections_display = Netlist_intersections_to_svg;
-    } else {
-        perror("unknown format");
-        exit(1);
-    }
+    char* display_path = change_extension(path, "ps");
+    char* intersection_display_path = change_extension(path, "int.ps");
 
     printf("handling `%s` ... ", path);
 
     Netlist netlist = Netlist_from_file(path);
-    netlist_display(&netlist, display_path);
+    Netlist_to_ps(&netlist, display_path);
 
     Vec intersections = compute_intersections(&netlist);
     size_t intersection_count = Vec_len(&intersections);
     Netlist_intersections_to_file(&intersections, intersection_path);
-    intersections_display(&netlist, &intersections,
-                          display_path, intersection_display_path);
+    Netlist_intersections_to_ps(&intersections, &netlist,
+                                display_path, intersection_display_path);
     Vec_drop(&intersections);
 
     Netlist_drop(&netlist);

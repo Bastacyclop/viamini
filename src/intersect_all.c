@@ -1,30 +1,12 @@
 #include <pthread.h>
 
+#include "util.h"
 #include "netlist.h"
 #include "display.h"
 
 /// Finds the intersections in all the netlists.
 
-Vec find_netlists(void);
 void handle(char* path);
-
-Vec find_netlists() {
-    system("find netlists/*.net > netlists.tmp");
-    FILE* f = fopen("netlists.tmp", "r");
-
-    Vec files = Vec_new(sizeof(char*));
-    char line[255];
-    while (fgets(line, 255, f)) {
-        cut_at_newline(line);
-        char* l = str_clone(line);
-        Vec_push(&files, &l);
-    }
-
-    fclose(f);
-    system("rm netlists.tmp");
-
-    return files;
-}
 
 void handle(char* path) {
     printf("handling `%s`.\n", path);
@@ -45,7 +27,7 @@ void handle(char* path) {
 }
 
 int main() {
-    Vec paths = find_netlists();
+    Vec paths = find("-S netlists/*.net");
     size_t path_count = Vec_len(&paths);
 
     Vec threads = Vec_with_capacity(path_count, sizeof(pthread_t));

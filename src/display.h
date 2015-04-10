@@ -34,21 +34,14 @@ Color ColorSet_pop(ColorSet* cs);
 void Netlist_to_ps(const Netlist* nl, const char* path);
 
 /// Outputs a postscript file, adding the circuit intersections to the base.
-void Netlist_intersections_to_ps(const Netlist* nl, const Vec* intersections,
+void Netlist_intersections_to_ps(const Vec* intersections, const Netlist* nl,
                                  const char* base_path, const char* file_path);
 
-/// Outputs an svg file showing the circuit.
-void Netlist_to_svg(const Netlist* nl, const char* path);
+/// Outputs a postscript file showing the graph.
+void Graph_to_ps(const Graph* g, const Netlist* nl, const char* path);
 
-/// Outputs an svg file, adding the circuit intersections to the base file.
-void Netlist_intersections_to_svg(const Netlist* nl, const Vec* intersections,
-                                  const char* base_path, const char* file_path);
-
-/// Outputs an svg file showing the graph.
-void Graph_to_svg(const Graph* g, const Netlist* nl, const char* path);
-
-/// Outputs an svg file showing the solution.
-void Solution_to_svg(const BitSet* sol, const Graph* g,
-                     const Netlist* nl, const char* path);
+/// Outputs a postscript file showing the solution.
+void Solution_to_ps(const BitSet* sol, const Graph* g,
+                    const Netlist* nl, const char* path);
 
 #endif // DISPLAY_H

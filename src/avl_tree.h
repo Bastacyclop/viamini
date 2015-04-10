@@ -1,7 +1,7 @@
 #ifndef AVL_TREE_H
 #define AVL_TREE_H
 
-#include "util.h"
+#include "core.h"
 
 /// A self-balancing binary search tree.
 
