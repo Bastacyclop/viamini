@@ -2,8 +2,7 @@
 #include "netlist.h"
 #include "display.h"
 
-/// Finds the intersections of the given netlist
-/// with the given method and display output.
+/// Finds the intersections of the given netlist with the given method.
 
 int main() {
     char file[255];

@@ -13,18 +13,19 @@
     printf(msg": %f s - %d clocks\n", delta_sec, (int)delta_time);
 
 int main() {
-    Vec paths = find("-S netlists/*.net");
+    Vec paths = find("netlists/*.net");
 
     clock_t time_mark, delta_time;
     double delta_sec;
     FILE* bench_data = fopen("bench_data", "w");
-    fprintf(bench_data, "%zu 0 0 0 0\n", Vec_len(&paths) + 1); // placeholder
+    fprintf(bench_data, "%zu 0 0 0 0 0\n", Vec_len(&paths) + 1); // placeholder
 
     char* path;
     while (Vec_pop(&paths, &path)) {
         printf(" - handling `%s`:\n", path);
 
         Netlist netlist = Netlist_from_file(path);
+        size_t seg_count = Netlist_segment_count(&netlist);
 
         measure_exec_time("   intersections naive",
             Vec intersections = Netlist_intersections_naive(&netlist);
@@ -52,13 +53,13 @@ int main() {
 
         Netlist_drop(&netlist);
 
-        fprintf(bench_data, "%zu %u %u %u %u\n", Vec_len(&paths) + 1,
+        fprintf(bench_data, "%zu %zu %u %u %u %u\n", Vec_len(&paths) + 1, seg_count,
                 naive_time, vec_sweep_time, list_sweep_time, avl_sweep_time);
         puts(TERM_GREEN("   ✓"));
         free(path);
     }
 
-    fputs("0 0 0 0 0\n", bench_data); // placeholder
+    fputs("0 0 0 0 0 0\n", bench_data); // placeholder
     fclose(bench_data);
 
     Vec_drop(&paths);

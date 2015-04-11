@@ -283,6 +283,18 @@ void Netlist_print(const Netlist* nl) {
     }
 }
 
+size_t Netlist_segment_count(const Netlist* nl) {
+    size_t count = 0;
+
+    size_t net_count = Vec_len(&nl->nets);
+    for (size_t n = 0; n < net_count; n++) {
+        const Net* net = Vec_get(&nl->nets, n);
+
+        count += Vec_len(&net->segments);
+    }
+
+    return count;
+}
 
 bool segment_intersects(SegmentRef a, SegmentRef b, Point* sect) {
     if (a.beg->x == a.end->x) { // |

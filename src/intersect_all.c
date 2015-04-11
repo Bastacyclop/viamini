@@ -4,7 +4,7 @@
 #include "netlist.h"
 #include "display.h"
 
-/// Finds the intersections in all the netlists.
+/// Finds the intersections of all the netlists.
 
 void handle(char* path);
 

@@ -43,6 +43,9 @@ void Netlist_drop(Netlist* nl);
 /// Prints the file representation of the netlist on the terminal.
 void Netlist_print(const Netlist* nl);
 
+/// Returns the total number of segments of the netlist.
+size_t Netlist_segment_count(const Netlist* nl);
+
 typedef struct {
     size_t net;
     size_t seg;
