@@ -116,4 +116,7 @@ BitSet Graph_hv_solve(const Graph* g, const Netlist* nl);
 /// Solves the problem by finding odd cycles.
 BitSet Graph_odd_cycle_solve(const Graph* g);
 
+/// Returns the number of vias required by the solution.
+size_t Solution_via_count(const BitSet* solution, const Graph* g);
+
 #endif // CIRCUIT_H

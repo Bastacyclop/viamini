@@ -1062,3 +1062,17 @@ void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
         }
     }
 }
+
+size_t Solution_via_count(const BitSet* solution, const Graph* g) {
+    size_t count = 0;
+
+    size_t len = Vec_len(&g->nodes);
+    for (size_t n = 0; n < len; n++) {
+        if (BitSet_contains(solution, n)) {
+            const GraphNode* node = Vec_get(&g->nodes, n);
+            if (node->type == POINT_NODE) count++;
+        }
+    }
+
+    return count;
+}

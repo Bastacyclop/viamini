@@ -3,6 +3,4 @@ netlists/*.int
 netlists/*.ps
 netlists/*.svg
 
-bench_data
 *.png
-*ibm*

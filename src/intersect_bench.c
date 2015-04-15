@@ -17,7 +17,7 @@ int main() {
 
     clock_t time_mark, delta_time;
     double delta_sec;
-    FILE* bench_data = fopen("bench_data", "w");
+    FILE* bench_data = fopen("intersect_bench/data", "w");
     fprintf(bench_data, "%zu 0 0 0 0 0\n", Vec_len(&paths) + 1); // placeholder
 
     char* path;
@@ -27,29 +27,31 @@ int main() {
         Netlist netlist = Netlist_from_file(path);
         size_t seg_count = Netlist_segment_count(&netlist);
 
-        measure_exec_time("   intersections naive",
-            Vec intersections = Netlist_intersections_naive(&netlist);
+        Vec intersections;
+
+        measure_exec_time("   naive",
+            intersections = Netlist_intersections_naive(&netlist);
         )
         uint32_t naive_time = (uint32_t)delta_time;
         Vec_drop(&intersections);
 
-        measure_exec_time("   intersections vec sweep",
-            Vec intersections2 = Netlist_intersections_vec_sweep(&netlist);
+        measure_exec_time("   vec sweep",
+            intersections = Netlist_intersections_vec_sweep(&netlist);
         )
         uint32_t vec_sweep_time = (uint32_t)delta_time;
-        Vec_drop(&intersections2);
+        Vec_drop(&intersections);
 
-        measure_exec_time("   intersections list sweep",
-            Vec intersections3 = Netlist_intersections_list_sweep(&netlist);
+        measure_exec_time("   list sweep",
+            intersections = Netlist_intersections_list_sweep(&netlist);
         )
         uint32_t list_sweep_time = (uint32_t)delta_time;
-        Vec_drop(&intersections3);
+        Vec_drop(&intersections);
 
-        measure_exec_time("   intersections avl sweep",
-            Vec intersections4 = Netlist_intersections_avl_sweep(&netlist);
+        measure_exec_time("   avl sweep",
+            intersections = Netlist_intersections_avl_sweep(&netlist);
         )
         uint32_t avl_sweep_time = (uint32_t)delta_time;
-        Vec_drop(&intersections4);
+        Vec_drop(&intersections);
 
         Netlist_drop(&netlist);
 

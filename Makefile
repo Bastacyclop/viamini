@@ -1,6 +1,7 @@
 SRCDIR := src
 BLDDIR := build
 TSTDIR := tests
+TSTBLDDIR := $(BLDDIR)/tests
 CFLAGS := -W -Wall -Werror -pedantic -pedantic-errors -std=c11
 
 ifeq ($(RELEASE), yes)
@@ -21,7 +22,7 @@ endif
 
 all: $(BLDDIR)/intersect $(BLDDIR)/intersect_all $(BLDDIR)/solve
 
-$(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h builddir
+$(BLDDIR)/%.o: $(SRCDIR)/%.c $(SRCDIR)/%.h $(BLDDIR)
 	@echo "Compiling $< into $@"
 	@$(CC) -c $(CFLAGS) $< -o $@
 
@@ -37,51 +38,67 @@ test: $(BLDDIR)/tests/vec $(BLDDIR)/tests/bit_set $(BLDDIR)/tests/binary_heap $(
 	done
 	@echo "[33m---------------------------------------------[0m"
 
-.PHONY: bench
-bench: $(BLDDIR)/bench
+.PHONY: intersect_bench
+intersect_bench: $(BLDDIR)/intersect_bench
 	@echo "[33m---------------- benchmarking ----------------[0m"
-	@if "./$(BLDDIR)/bench"; then \
+	@if "./$(BLDDIR)/intersect_bench"; then \
 	  echo "[32mbenchmarked[0m"; \
 	else \
 	  echo "[31mbenchmark failed[0m"; \
 	fi && \
+	cd intersect_bench && \
 	gnuplot < plot_cmds
-	@echo "[33m---------------------------------------------[0m"
+	@echo "[33m----------------------------------------------[0m"
+
+.PHONY: solve_bench
+solve_bench: $(BLDDIR)/solve_bench
+	@echo "[33m---------------- benchmarking ----------------[0m"
+	@if "./$(BLDDIR)/solve_bench"; then \
+	  echo "[32mbenchmarked[0m"; \
+	else \
+	  echo "[31mbenchmark failed[0m"; \
+	fi && \
+	cd solve_bench && \
+	gnuplot < plot_cmds
+	@echo "[33m----------------------------------------------[0m"
 
 NETLIST_DEP := $(BLDDIR)/netlist.o $(BLDDIR)/binary_heap.o $(BLDDIR)/avl_tree.o $(BLDDIR)/vec.o $(BLDDIR)/list.o $(BLDDIR)/bit_set.o $(BLDDIR)/util.o $(BLDDIR)/core.o
 
-$(BLDDIR)/intersect: $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+$(BLDDIR)/intersect: $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP)
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/intersect.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/intersect
 
-$(BLDDIR)/intersect_all: $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+$(BLDDIR)/intersect_all: $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST_DEP)
 	$(CC) $(CFLAGS) -pthread -lm $(SRCDIR)/intersect_all.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/intersect_all
 
-$(BLDDIR)/bench: $(SRCDIR)/bench.c $(NETLIST_DEP) builddir
-	$(CC) $(CFLAGS) -lm $(SRCDIR)/bench.c $(NETLIST_DEP) -o $(BLDDIR)/bench
-	
-$(BLDDIR)/solve: $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) builddir
+$(BLDDIR)/intersect_bench: $(SRCDIR)/intersect_bench.c $(NETLIST_DEP)
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/intersect_bench.c $(NETLIST_DEP) -o $(BLDDIR)/intersect_bench
+
+$(BLDDIR)/solve: $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP)
 	$(CC) $(CFLAGS) -lm $(SRCDIR)/solve.c $(BLDDIR)/display.o $(NETLIST_DEP) -o $(BLDDIR)/solve
 
-$(BLDDIR)/tests/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/vec
+$(BLDDIR)/solve_bench: $(SRCDIR)/solve_bench.c $(NETLIST_DEP)
+	$(CC) $(CFLAGS) -lm $(SRCDIR)/solve_bench.c $(NETLIST_DEP) -o $(BLDDIR)/solve_bench
 
-$(BLDDIR)/tests/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/bit_set
+$(TSTBLDDIR)/vec: $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o $(TSTBLDDIR)
+	$(CC) $(CFLAGS) $(TSTDIR)/vec.c $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(TSTBLDDIR)/vec
 
-$(BLDDIR)/tests/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/binary_heap
+$(TSTBLDDIR)/bit_set: $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o $(TSTBLDDIR)
+	$(CC) $(CFLAGS) $(TSTDIR)/bit_set.c $(BLDDIR)/bit_set.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(TSTBLDDIR)/bit_set
 
-$(BLDDIR)/tests/avl_tree: $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/avl_tree
+$(TSTBLDDIR)/binary_heap: $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o $(TSTBLDDIR)
+	$(CC) $(CFLAGS) $(TSTDIR)/binary_heap.c $(BLDDIR)/binary_heap.o $(BLDDIR)/vec.o $(BLDDIR)/core.o -o $(TSTBLDDIR)/binary_heap
 
-$(BLDDIR)/tests/list: $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o testdir
-	$(CC) $(CFLAGS) $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o -o $(BLDDIR)/tests/list
+$(TSTBLDDIR)/avl_tree: $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o $(TSTBLDDIR)
+	$(CC) $(CFLAGS) $(TSTDIR)/avl_tree.c $(BLDDIR)/avl_tree.o $(BLDDIR)/core.o -o $(TSTBLDDIR)/avl_tree
 
-builddir:
+$(TSTBLDDIR)/list: $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o $(TSTBLDDIR)
+	$(CC) $(CFLAGS) $(TSTDIR)/list.c $(BLDDIR)/list.o $(BLDDIR)/core.o -o $(TSTBLDDIR)/list
+
+$(BLDDIR):
 	@mkdir -p $(BLDDIR)
 
-testdir:
-	@mkdir -p $(BLDDIR)/tests
+$(TSTBLDDIR):
+	@mkdir -p $(TSTBLDDIR)
 
 .PHONY: clean
 clean:
