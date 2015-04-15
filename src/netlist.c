@@ -350,12 +350,12 @@ IntersectionVec Netlist_intersections_naive(const Netlist* nl) {
                         .end = Vec_get(&b_net->points, b->end)
                     };
 
-                    Point sect;
-                    if (segment_intersects(a_ref, b_ref, &sect)) {
+                    Point section;
+                    if (segment_intersects(a_ref, b_ref, &section)) {
                         Intersection intersection = {
                             .a = { .net = i, .seg = s },
                             .b = { .net = j, .seg = t },
-                            .sect = sect
+                            .point = section
                         };
                         Vec_push(&intersections, &intersection);
                     }
@@ -488,7 +488,7 @@ void vec_sweep_check_intersections(IntersectionVec* intersections,
             if (vd->ref.beg->y <= hy && hy <= vd->ref.end->y) {
                 Intersection intersection = {
                     .a = vd->loc, .b = hd->loc,
-                    .sect = { vd->ref.beg->x, hy }
+                    .point = { vd->ref.beg->x, hy }
                 };
                 Vec_push(intersections, &intersection);
             }
@@ -606,7 +606,7 @@ void list_sweep_check_intersections(IntersectionVec* intersections,
         if (hd->loc.net != vd->loc.net) {
             Intersection intersection = {
                 .a = vd->loc, .b = hd->loc,
-                .sect = { vd->ref.beg->x, hy }
+                .point = { vd->ref.beg->x, hy }
             };
             Vec_push(intersections, &intersection);
         }
@@ -712,7 +712,7 @@ void avl_sweep_check_iter(IntersectionVec* intersections, const AVLNode* n,
             if (vd->loc.net != hd->loc.net) {
                 Intersection i = {
                     .a = vd->loc, .b = hd->loc,
-                    .sect = { vd->ref.beg->x, hd->ref.beg->y }
+                    .point = { vd->ref.beg->x, hd->ref.beg->y }
                 };
                 Vec_push(intersections, &i);
             }
@@ -753,6 +753,7 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
 
     GraphNodeVec nodes = Vec_with_capacity(nodes_count, sizeof(GraphNode));
 
+    // Setting up nodes and continuity edges.
     for (size_t n = 0; n < net_count; n++) {
         size_t net_offset = Vec_len(&nodes);
         const Net* net = Vec_get(&nl->nets, n);
@@ -796,6 +797,7 @@ Graph Graph_new(const Netlist* nl, const char* int_path) {
     FILE* int_f = fopen(int_path, "r");
 
     char line[255];
+    // Setting up conflict edges.
     while (fgets(line, 255, int_f)) {
         SegmentLoc a_loc, b_loc;
         if (sscanf(line, "%zu %zu %zu %zu",
@@ -836,12 +838,9 @@ void graph_node_drop(GraphNode* n) {
 }
 
 BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
-    // point: false -> no via
-    //        true -> via
-    // segment: false -> face A
-    //          true -> face B
     BitSet solution = BitSet_with_capacity(Vec_len(&g->nodes));
 
+    // Assigning segment faces.
     size_t offset = 0;
     size_t net_count = Vec_len(&nl->nets);
     for (size_t n = 0; n < net_count; n++) {
@@ -854,13 +853,14 @@ BitSet Graph_hv_solve(const Graph* g, const Netlist* nl) {
             const GraphNode* node = Vec_get(&g->nodes, i);
             const Point* beg = Vec_get(&net->points, node->segment->beg);
             const Point* end = Vec_get(&net->points, node->segment->end);
-            if (beg->x == end->x) { // |
+            if (beg->x == end->x) { // |, we change side
                 BitSet_insert(&solution, i);
-            } // else -,  is already false
+            } // else -, we don't change side
         }
         offset += segment_count;
     }
 
+    // Detecting needed vias.
     offset = 0;
     for (size_t n = 0; n < net_count; n++) {
         const Net* net = Vec_get(&nl->nets, n);
@@ -932,7 +932,7 @@ void add_via_with_cycle(BitSet* solution, const Vec* cycle, const Graph* g) {
             return;
         }
     }
-    assert(false);
+    assert(false); // There has to be a point in the cycle, we shouldn't get there.
 }
 
 void reset_marks(Vec* marks, const BitSet* solution, const Graph* g) {
@@ -990,7 +990,7 @@ bool Graph_find_odd_cycle_from(const Graph* g, size_t root, Vec* path,
     size_t continuity_count = Vec_len(&n->continuity);
     for (size_t c = 0; c < (conflict_count + continuity_count); c++) {
         const GraphEdge* e;
-        if (c < conflict_count)
+        if (c < conflict_count) // TODO: they are better ways to do that.
             e = Vec_get(&n->conflict, c);
         else e = Vec_get(&n->continuity, c - conflict_count);
         size_t v = e->v;
@@ -1037,6 +1037,8 @@ void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
     if (n->type == SEGMENT_NODE) {
         if (face) BitSet_insert(solution, root);
     } else {
+        // We don't know what to do after a via from here,
+        // we'll get past from another path.
         if (BitSet_contains(solution, root)) return;
     }
 
@@ -1045,6 +1047,7 @@ void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
         const GraphEdge* e = Vec_get(&n->conflict, c);
         size_t v = e->v;
 
+        // The only way to avoid the conflict is to change side.
         if (!BitSet_contains(visited, v)) {
             Graph_solve_faces_from(g, v, solution, visited, !face);
         } else {
@@ -1057,6 +1060,7 @@ void Graph_solve_faces_from(const Graph* g, size_t root, BitSet* solution,
         const GraphEdge* e = Vec_get(&n->continuity, c);
         size_t v = e->v;
 
+        // We have to continue on the same side if there is no via.
         if (!BitSet_contains(visited, v)) {
             Graph_solve_faces_from(g, v, solution, visited, face);
         }

@@ -55,7 +55,7 @@ typedef Vec IntersectionVec;
 typedef struct {
     SegmentLoc a;
     SegmentLoc b;
-    Point sect;
+    Point point;
 } Intersection;
 
 /// Finds the netlist intersections by comparing the segments of different nets two by two.
@@ -103,11 +103,33 @@ typedef struct {
     Vec net_offsets;
 } Graph;
 
+/*
+ * ABOUT THE GRAPH:
+ *
+ * Let p(n, i) be the node associated to the i-th point of the n-th net,
+ * and s(n, i) the node associated to the i-th segment of the n-th net.
+ * The graph nodes are organized as following:
+ * [p(1, 1), p(1, 2), ... , s(1, 1), s(1, 2), ... ,
+ *  ... ,
+ *  p(n, 1), p(n, 2), ... , s(n, 1), s(n, 2), ... ]
+ * This is useful as it binds the node's index to it's netlist location.
+ */
+
 /// Creates the graph associated to the netlist and its intersections.
 Graph Graph_new(const Netlist* nl, const char* int_path);
 
 /// Releases the graph resources.
 void Graph_drop(Graph* g);
+
+/*
+ * ABOUT THE SOLUTION:
+ *
+ * Let n be a node index.
+ * If the node is associated to a point:
+ *   if the solution bit set contains n, it means the point is a via.
+ * Else the node is associated to a segment:
+ *   if the solution bit set contains n, it means the segment is on the second face.
+ */
 
 /// Solves the problem by putting every horizontal segments on a face
 ///                           and -----  vertical  ----------- the other.

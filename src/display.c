@@ -188,7 +188,7 @@ void Netlist_intersections_to_ps(const Vec* intersections, const Netlist* nl,
     size_t intersection_count = Vec_len(intersections);
     for (size_t i = 0; i < intersection_count; i++) {
         const Intersection* intersection = Vec_get(intersections, i);
-        ps_draw_intersection(f, intersection->sect, &trans);
+        ps_draw_intersection(f, intersection->point, &trans);
     }
 
     ps_init_text(f);
